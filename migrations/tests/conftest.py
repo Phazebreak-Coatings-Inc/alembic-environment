@@ -1,3 +1,4 @@
+import pytest
 from pytest_alembic.config import Config
 
 @pytest.fixture
