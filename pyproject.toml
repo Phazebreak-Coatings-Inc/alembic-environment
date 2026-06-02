@@ -12,6 +12,8 @@ dependencies = [
     "typer>=0.26.6",
     "models",
     "migrations",
+    "pytest-alembic>=0.12.1",
+    "pytest>=9.0.3",
 ]
 
 # This is a "virtual" workspace root: it has no [build-system], so uv treats it
