@@ -1,23 +1,36 @@
 from sqlmodel import Session
 from typing import Callable, get_type_hints
-from ..utils import ValidDatabaseEnvironments, ProdDatabaseSettings, StagingDatabaseSettings, validate_database_environment, DevDatabaseSettings, get_database_setting
+from ..utils import (
+    ValidDatabaseEnvironments,
+    ProdDatabaseSettings,
+    StagingDatabaseSettings,
+    validate_database_environment,
+    DevDatabaseSettings,
+    get_database_setting,
+)
 from collections import defaultdict
 
 SeedFunction = Callable[[Session], None]
 SeedRegistry = dict[ValidDatabaseEnvironments, list[SeedFunction]]
 
+
 class SeedingException(Exception): ...
 
-class Seed():
+
+class Seed:
     __seeds__: SeedRegistry = defaultdict(list)
 
     @classmethod
     def seed(cls, env: ValidDatabaseEnvironments):
         def dec(fn) -> SeedFunction:
             if not (sesh := get_type_hints(fn).get("session", None)):
-                raise SeedingException(f"session must be passed as a type hint in fn {fn.__name__}") 
+                raise SeedingException(
+                    f"session must be passed as a type hint in fn {fn.__name__}"
+                )
             if not (isinstance(sesh, type) and issubclass(sesh, Session)):
-                raise SeedingException(f"`session` of {fn.__name__} must be a sqlmodel.Session subclass")            
+                raise SeedingException(
+                    f"`session` of {fn.__name__} must be a sqlmodel.Session subclass"
+                )
             cls.__seeds__[validate_database_environment(env)].append(fn)
             return fn
 
@@ -26,8 +39,10 @@ class Seed():
     def get_seeds(self, env: ValidDatabaseEnvironments) -> list[SeedFunction]:
         return self.__seeds__[(validate_database_environment(env))]
 
+
 seed_registry = Seed()
 seed = seed_registry.seed
+
 
 def execute_seeds(env: ValidDatabaseEnvironments):
     env = validate_database_environment(env)
