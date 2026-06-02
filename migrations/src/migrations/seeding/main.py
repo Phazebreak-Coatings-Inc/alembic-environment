@@ -36,6 +36,9 @@ class Seed:
 
         return dec
 
+    def count_seeds(self, env: ValidDatabaseEnvironments) -> int:
+        return len(self.__seeds__[(validate_database_environment(env))])
+
     def get_seeds(self, env: ValidDatabaseEnvironments) -> list[SeedFunction]:
         return self.__seeds__[(validate_database_environment(env))]
 

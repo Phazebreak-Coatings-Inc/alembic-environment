@@ -14,6 +14,7 @@ from ..seeding.main import seed_registry
 import time
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from contextlib import contextmanager
 
 app = Typer(pretty_exceptions_show_locals=False)
 EnvArg = Annotated[
@@ -34,14 +35,6 @@ def _pytest(throw: bool = False):
 
 def _heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
-
-@app.command(help="Test the alembic revisions generated.")
-def test(
-    throw: Annotated[
-        bool, typer.Option("-t", "--throw", help="Raise on test failure.")
-    ] = False,
-):
-    _pytest(throw)
 
 
 @app.command(
@@ -72,6 +65,13 @@ def up():
 def down():
     sh(f"docker rm -f {m.database_name}", check=True)
 
+@contextmanager
+def migrations_database():
+    try:
+        up()
+        yield None
+    finally:
+        down()
 
 @app.command(help="Seed the database with anything decorated with 'migrations.seed'.")
 def seed(env: EnvArg):
@@ -81,13 +81,21 @@ def seed(env: EnvArg):
     )
     execute_seeds(env)
 
+@app.command(help="Test the alembic revisions generated.")
+def test(
+    throw: Annotated[
+        bool, typer.Option("-t", "--throw", help="Raise on test failure.")
+    ] = False,
+):
+    with migrations_database():
+        _pytest(throw)
+
 
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
 )
 def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
-    up()
-    try:        
+    with migrations_database():
         if len(_heads()) > 1:
             sh('alembic merge -m "merge heads" heads')
         sh("alembic upgrade head", check=True)
@@ -96,9 +104,6 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
             check=True,
         )
         _pytest(throw=True)
-    finally:
-        down()
-
 
 alembic_env = alembic_settings.env
 

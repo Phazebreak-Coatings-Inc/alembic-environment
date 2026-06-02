@@ -1,0 +1,11 @@
+_exclude:
+    - "*.bar"
+    - ".gitignore"
+    - "./.venv/"
+    - ".git"
+    - "*.env"
+    - ".env"
+    - "./src/"
+    - "./uv.lock"
+    - "./dist/"
+    - "./pyproject.toml"
