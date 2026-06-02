@@ -10,11 +10,16 @@ dependencies = [
     "sqlalchemy>=2.0.50",
     "sqlmodel>=0.0.38",
     "typer>=0.26.6",
+    "models",
+    "migrations",
 ]
 
+# This is a "virtual" workspace root: it has no [build-system], so uv treats it
+# as an umbrella that is not itself built/installed. Its only job is to aggregate
+# the members below into one lockfile and one virtual environment.
 [tool.uv.workspace]
-members = ["models/*"]
+members = ["models", "migrations"]
 
-[build-system]
-requires = ["uv_build>=0.11.18,<0.12"]
-build-backend = "uv_build"
+[tool.uv.sources]
+models = { workspace = true }
+migrations = { workspace = true }
