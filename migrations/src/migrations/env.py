@@ -2,7 +2,11 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-
+import os
+from migrations.utils import (
+    migration_settings, get_database_setting,
+    validate_database_environment, alembic_settings,
+)
 from alembic import context
 
 # this is the Alembic Config object, which provides
@@ -30,6 +34,12 @@ target_metadata = APP_METADATA
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+def _resolve_url() -> str:
+    # ALEMBIC_ENV override (set by the CLI's -e) wins; else the safe throwaway db
+    if env := os.environ.get("ALEMBIC_ENV"):
+        return get_database_setting(validate_database_environment(env)).database_url
+    return migration_settings.database_url
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -43,17 +53,15 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = config.get_main_option("sqlalchemy.url")
+    url = _resolve_url()                 
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
-
     with context.begin_transaction():
         context.run_migrations()
-
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode.
@@ -65,17 +73,19 @@ def run_migrations_online() -> None:
     connectable = context.config.attributes.get("connection", None)
 
     if connectable is None:
+        section = context.config.get_section(context.config.config_ini_section) or {}
+        section["sqlalchemy.url"] = _resolve_url()        # <-- add
         connectable = engine_from_config(
-            context.config.get_section(context.config.config_ini_section), #type: ignore
-            prefix="sqlalchemy.",
-            poolclass=pool.NullPool,
+            section, prefix="sqlalchemy.", poolclass=pool.NullPool,
         )
-
+   
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            compare_type=True,
+            compare_server_default=True,
         )
-
         with context.begin_transaction():
             context.run_migrations()
 

@@ -63,4 +63,7 @@ def get_database_setting(env: ValidDatabaseEnvironments) -> DatabaseSetting :
     return s
 
 class AlembicSettings(BaseSettings):
+    env: ValidDatabaseEnvironments = "dev"
     auto_seed: bool = True
+
+alembic_settings = AlembicSettings()
