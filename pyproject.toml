@@ -17,6 +17,7 @@ dependencies = [
     "pydantic-settings>=2.14.1",
     "psycopg[binary]>=3.3.4",
     "ruff>=0.15.15",
+    "tomlkit>=0.15.0",
 ]
 
 # This is a "virtual" workspace root: it has no [build-system], so uv treats it
@@ -28,3 +29,6 @@ members = ["models", "migrations"]
 [tool.uv.sources]
 models = { workspace = true }
 migrations = { workspace = true }
+
+[dependency-groups]
+docs = ["zensical>=0.0.43",]

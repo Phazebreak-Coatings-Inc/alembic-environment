@@ -9,3 +9,6 @@ _exclude:
     - "./uv.lock"
     - "./dist/"
     - "./pyproject.toml"
+    - "./docs/"
+    - "./.github/workflows/docs.yml"
+
