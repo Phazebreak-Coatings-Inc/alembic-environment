@@ -11,4 +11,4 @@ _exclude:
     - "./pyproject.toml"
     - "./docs/"
     - "./.github/workflows/docs.yml"
-
+    - "./tests"

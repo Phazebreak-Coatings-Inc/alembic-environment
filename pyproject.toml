@@ -20,9 +20,6 @@ dependencies = [
     "tomlkit>=0.15.0",
 ]
 
-# This is a "virtual" workspace root: it has no [build-system], so uv treats it
-# as an umbrella that is not itself built/installed. Its only job is to aggregate
-# the members below into one lockfile and one virtual environment.
 [tool.uv.workspace]
 members = ["models", "migrations"]
 
