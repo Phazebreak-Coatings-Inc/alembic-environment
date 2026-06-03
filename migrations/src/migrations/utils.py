@@ -1,7 +1,5 @@
-import os
 from sqlalchemy import MetaData, create_engine
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from functools import lru_cache
 from typing import Literal
 
 APP_METADATA = MetaData()

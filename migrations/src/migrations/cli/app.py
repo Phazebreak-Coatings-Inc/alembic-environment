@@ -22,6 +22,7 @@ EnvArg = Annotated[
     typer.Argument(help="Choose which environment to seed for."),
 ]
 
+
 def sh(cmd: str, check=True, **kwargs):
     try:
         subprocess.run(cmd, shell=True, check=check, **kwargs)
@@ -32,6 +33,7 @@ def sh(cmd: str, check=True, **kwargs):
 
 def _pytest(throw: bool = False):
     sh("pytest", check=throw)
+
 
 def _heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
@@ -65,6 +67,7 @@ def up():
 def down():
     sh(f"docker rm -f {m.database_name}", check=True)
 
+
 @contextmanager
 def migrations_database():
     try:
@@ -73,6 +76,7 @@ def migrations_database():
     finally:
         down()
 
+
 @app.command(help="Seed the database with anything decorated with 'migrations.seed'.")
 def seed(env: EnvArg):
     typer.confirm(
@@ -80,6 +84,7 @@ def seed(env: EnvArg):
         abort=True,
     )
     execute_seeds(env)
+
 
 @app.command(help="Test the alembic revisions generated.")
 def test(
@@ -104,6 +109,7 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
             check=True,
         )
         _pytest(throw=True)
+
 
 alembic_env = alembic_settings.env
 

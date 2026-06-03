@@ -4,8 +4,9 @@ from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 import os
 from migrations.utils import (
-    migration_settings, get_database_setting,
-    validate_database_environment, alembic_settings,
+    migration_settings,
+    get_database_setting,
+    validate_database_environment,
 )
 from alembic import context
 
@@ -15,23 +16,25 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from migrations.utils import APP_METADATA
-import models
 
-target_metadata = APP_METADATA  
+target_metadata = APP_METADATA
+
 
 def _resolve_url() -> str:
     if env := os.environ.get("ALEMBIC_ENV"):
         return get_database_setting(validate_database_environment(env)).database_url
     return migration_settings.database_url
 
+
 def process_revision_directives(context, revision, directives):
     if getattr(context.config.cmd_opts, "autogenerate", False):
         script = directives[0]
         if script.upgrade_ops.is_empty():
-            directives[:] = []          
+            directives[:] = []
+
 
 def run_migrations_offline() -> None:
-    url = _resolve_url()                 
+    url = _resolve_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -42,6 +45,7 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def run_migrations_online() -> None:
     connectable = context.config.attributes.get("connection", None)
 
@@ -49,9 +53,11 @@ def run_migrations_online() -> None:
         section = context.config.get_section(context.config.config_ini_section) or {}
         section["sqlalchemy.url"] = _resolve_url()
         connectable = engine_from_config(
-            section, prefix="sqlalchemy.", poolclass=pool.NullPool,
+            section,
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
         )
-   
+
     with connectable.connect() as connection:
         context.configure(
             connection=connection,
