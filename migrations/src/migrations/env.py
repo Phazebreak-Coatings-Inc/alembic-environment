@@ -15,10 +15,9 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from migrations.utils import APP_METADATA
+from migrations import APP_METADATA
 
 target_metadata = APP_METADATA
-
 
 def _resolve_url() -> str:
     if env := os.environ.get("ALEMBIC_ENV"):

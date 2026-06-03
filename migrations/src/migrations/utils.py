@@ -2,7 +2,6 @@ from sqlalchemy import MetaData, create_engine
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 
-APP_METADATA = MetaData()
 DEV_ENV = ".env.dev"
 STAGING_ENV = ".env.staging"
 PROD_ENV = ".env.prod"

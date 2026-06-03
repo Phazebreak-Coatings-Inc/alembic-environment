@@ -28,4 +28,7 @@ models = { workspace = true }
 migrations = { workspace = true }
 
 [dependency-groups]
+dev = [
+    "debugpy>=1.8.21",
+]
 docs = ["zensical>=0.0.43",]
