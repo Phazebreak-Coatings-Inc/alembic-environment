@@ -18,6 +18,8 @@ dependencies = [
     "psycopg[binary]>=3.3.4",
     "ruff>=0.15.15",
     "tomlkit>=0.15.0",
+    "sqlacodegen>=4.0.3",
+    "inflection>=0.5.1",
 ]
 
 [tool.uv.workspace]

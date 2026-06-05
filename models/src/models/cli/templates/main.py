@@ -5,7 +5,7 @@ from itertools import chain
 from sqlmodel import SQLModel
 from jinja2 import meta
 
-TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent / "templates"
+TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent.parent / "templates"
 if not TEMPLATES_DIR.exists():
     raise FileNotFoundError(f"Missing templates dir at {TEMPLATES_DIR}")
 
@@ -36,22 +36,20 @@ class _Fuzz:
 
 TemplatesRegistryType = dict[str, Path]
 
-
 class TemplatesRegistry:
     __env__: ClassVar[Environment] = JINJA_ENV
     __opts__: ClassVar[TemplatesRegistryType] = {}
 
-    def __init_subclass__(cls):
+    def __init__(self):
         files = chain(
             TEMPLATES_DIR.glob("*.py.j2"),
             TEMPLATES_DIR.glob("*.py.jinja"),
         )
         for f in files:
-            print(f"Registered model template at {f}")
             name = f.name.removesuffix(".py.j2").removesuffix(
                 ".py.jinja"
             )
-            cls.__opts__[name] = f
+            self.__opts__[name] = f
 
     @classmethod
     def get_options(cls) -> TemplatesRegistryType:
@@ -87,15 +85,19 @@ class TemplatesRegistry:
         path = cls.validate_option(template)
         rendered = cls.__env__.get_template(path.name).render(**context)
         if validate:
-            cls._check_runs(rendered, template)
+            cls._validate_render(rendered, template)
         return rendered
 
     @classmethod
-    def _check_runs(cls, rendered: str, template: str) -> dict:
+    def _validate_render(cls, rendered: str, template: str) -> dict:
         before = set(SQLModel.metadata.tables)
         namespace: dict = {}
         try:
             exec(compile(rendered, f"<{template}>", "exec"), namespace)
+        except SyntaxError as e:
+            raise ValueError(
+                f"{template} rendered invalid Python (line {e.lineno}): {e.text!r}."
+            ) from e
         except Exception as e:
             raise ValueError(f"{template} failed to run: {e!r}") from e
         finally:
