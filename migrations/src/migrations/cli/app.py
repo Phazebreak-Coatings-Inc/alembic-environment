@@ -38,6 +38,7 @@ def _pytest(throw: bool = False):
 def _heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
 
+
 def _wait_for_db(engine, attempts: int = 60, delay: float = 0.5):
     for _ in range(attempts):
         try:
@@ -47,6 +48,7 @@ def _wait_for_db(engine, attempts: int = 60, delay: float = 0.5):
         except Exception:
             time.sleep(delay)
     raise RuntimeError("database never accepted connections")
+
 
 @app.command(
     help="Start up the migrations database for autogenerating alembic revisions."
@@ -59,9 +61,11 @@ def up():
     )
     _wait_for_db(engine=m.engine)
 
+
 @app.command(help="Shut down the migrations database.")
 def down():
     sh(f"docker rm -f {m.database_name}", check=True)
+
 
 @contextmanager
 def migrations_database():

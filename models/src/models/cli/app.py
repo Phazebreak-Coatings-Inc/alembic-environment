@@ -9,12 +9,21 @@ import ast
 
 app = Typer(pretty_exceptions_show_locals=False)
 
-@app.command(help=f"Create a model from a jinja2 template in {TEMPLATES_DIR}, or pass --sql or -s to generate from {SQL_DIR}")
+
+@app.command(
+    help=f"Create a model from a jinja2 template in {TEMPLATES_DIR}, or pass --sql or -s to generate from {SQL_DIR}"
+)
 def g(
-    template: Annotated[str, typer.Argument(help="Template name, default is sqlmodel")] = "",
+    template: Annotated[
+        str, typer.Argument(help="Template name, default is sqlmodel")
+    ] = "",
     file_name: Annotated[str, typer.Argument(help="The name of your file")] = "",
-    var: Annotated[list[str], typer.Option("--var", "-v", help="key=value, repeatable")] = list(),
-    sql: Annotated[bool, typer.Option("--sql", "-s", help=f"Generate from {SQL_DIR}")] = False,
+    var: Annotated[
+        list[str], typer.Option("--var", "-v", help="key=value, repeatable")
+    ] = list(),
+    sql: Annotated[
+        bool, typer.Option("--sql", "-s", help=f"Generate from {SQL_DIR}")
+    ] = False,
     dry_run: Annotated[
         bool,
         typer.Option(
@@ -24,13 +33,16 @@ def g(
 ):
     if sql:
         s = SQLGenerator()
-        print(f"\nRendered {s.len_models} model(s) from {[f.name for f in s.files]}: \n\n{s.code}")
+        print(
+            f"\nRendered {s.len_models} model(s) from {[f.name for f in s.files]}: \n\n{s.code}"
+        )
         if not dry_run:
             s.write_files()
-
-    else: 
+    else:
         if not template:
-            print(f"Template name not provided: choose from {list(template_registry.get_options().keys())}")
+            print(
+                f"Template name not provided: choose from {list(template_registry.get_options().keys())}"
+            )
             raise typer.Exit(1)
         if not file_name:
             print("File name not provided, use: generate_model {template} {file_name}")
@@ -47,7 +59,10 @@ def g(
         output = template_registry.render(template=template, context=ctx, validate=True)
         path = Path(__file__).parent.parent / f"{file_name}.py"
         if path.exists():
-            typer.confirm(f"File already exists at {path}, are you sure you want to overwrite it?", abort=True)
+            typer.confirm(
+                f"File already exists at {path}, are you sure you want to overwrite it?",
+                abort=True,
+            )
         if not dry_run:
             with open(path, "w") as f:
                 f.write(output)

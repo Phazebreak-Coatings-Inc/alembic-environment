@@ -1,4 +1,4 @@
-from sqlalchemy import MetaData, create_engine
+from sqlalchemy import create_engine
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 

@@ -15,6 +15,7 @@ JINJA_ENV = Environment(
     lstrip_blocks=True,
 )
 
+
 class _Fuzz:
     def __init__(self, name: str = "fuzz"):
         self._name = name
@@ -36,6 +37,7 @@ class _Fuzz:
 
 TemplatesRegistryType = dict[str, Path]
 
+
 class TemplatesRegistry:
     __env__: ClassVar[Environment] = JINJA_ENV
     __opts__: ClassVar[TemplatesRegistryType] = {}
@@ -46,9 +48,7 @@ class TemplatesRegistry:
             TEMPLATES_DIR.glob("*.py.jinja"),
         )
         for f in files:
-            name = f.name.removesuffix(".py.j2").removesuffix(
-                ".py.jinja"
-            )
+            name = f.name.removesuffix(".py.j2").removesuffix(".py.jinja")
             self.__opts__[name] = f
 
     @classmethod

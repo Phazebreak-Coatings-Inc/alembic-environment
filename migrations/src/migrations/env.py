@@ -19,6 +19,7 @@ from migrations import APP_METADATA
 
 target_metadata = APP_METADATA
 
+
 def _resolve_url() -> str:
     if env := os.environ.get("ALEMBIC_ENV"):
         return get_database_setting(validate_database_environment(env)).database_url
