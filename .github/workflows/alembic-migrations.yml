@@ -28,4 +28,4 @@ jobs:
         run: uv sync
 
       - name: Run migration test suite
-        run: uv run migrations test
+        run: uv run python -m migrations test
