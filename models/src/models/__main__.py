@@ -1,3 +1,3 @@
-from models.cli import app
+from models._cli import app
 
 app()

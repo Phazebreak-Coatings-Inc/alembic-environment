@@ -1,8 +1,0 @@
-from sqlmodel import SQLModel
-from migrations import APP_METADATA
-from sqlmodel import SQLModel, Field
-
-class {{ model_name }}(SQLModel, table=True):
-    id: int | None = Field(default=None, primary_key=True)
-{% for col in columns %}    {{ col.name }}: {{ col.type }}
-{% endfor %}

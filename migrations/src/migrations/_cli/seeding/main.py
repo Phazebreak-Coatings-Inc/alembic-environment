@@ -1,6 +1,6 @@
 from sqlmodel import Session
 from typing import Callable, get_type_hints
-from ..utils import (
+from migrations.utils import (
     ValidDatabaseEnvironments,
     validate_database_environment,
     get_database_setting,

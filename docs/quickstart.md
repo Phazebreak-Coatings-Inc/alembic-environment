@@ -28,15 +28,22 @@ uv run python -m migrations --help
 
 ## Create your Models and Migrations
 
-After creating a model with either SQLModel or SQLAlchemy, attach ```migrations.APP_METADATA``` to it.
+Create your first model at ```./models/src/models/my_model.py```:
 
 ```python
 from sqlmodel import SQLModel, Field
-from migrations import APP_METADATA
 
 class MyTable(SQLModel, table=True):
     metadata = APP_METADATA
     id: int = Field(primary_key=True, default=1)
+```
+
+After creating a model with either SQLModel or SQLAlchemy, make sure to import it at ```./models/src/models/__init__.py```.
+
+```python
+from .mymodel import MyTable
+
+__all__ = ["MyTable"]
 ```
 
 Now, autogenerate a migration:

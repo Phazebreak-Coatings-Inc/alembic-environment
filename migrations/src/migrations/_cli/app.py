@@ -9,8 +9,8 @@ from ..utils import (
     alembic_settings,
 )
 from typing import Annotated
-from ..seeding import execute_seeds
-from ..seeding.main import seed_registry
+from .seeding import execute_seeds
+from .seeding.main import seed_registry
 import time
 from alembic.config import Config
 from alembic.script import ScriptDirectory
@@ -124,3 +124,20 @@ def apply(
         check=True,
         env={**os.environ, "alembic_env": validate_database_environment(env)},
     )
+
+
+@app.command(help="Generate the first (baseline) revision, even if empty.")
+def init():
+    if _heads():
+        typer.secho(
+            "Revisions already exist, use 'migrate' instead.",
+            fg=typer.colors.RED,
+            err=True,
+        )
+        raise typer.Exit(1)
+    with migrations_database():
+        sh(
+            f'alembic -x initial=true revision --autogenerate -m "initial"',
+            check=True,
+        )
+        _pytest(throw=True)

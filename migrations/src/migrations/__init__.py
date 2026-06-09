@@ -5,4 +5,4 @@ MIGRATIONS_PROJECT_ROOT = Path(__file__).parent.parent.parents
 APP_METADATA = SQLModel.metadata
 
 from .utils import *
-from .seeding import seed
+from ._cli.seeding import seed

@@ -50,6 +50,7 @@ Copyright &copy; 2026 Phazebreak Coatings, Inc.
 # ]
 nav = [
    { "Quickstart" = "quickstart.md" },
+    { "Model Generation" = "model_generation.md"}
 ]
 # With the "extra_css" option you can add your own CSS styling to customize
 # your Zensical project according to your needs. You can add any number of
