@@ -1,5 +1,4 @@
 from logging.config import fileConfig
-import json
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 import os
@@ -16,13 +15,15 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from migrations import APP_METADATA
-import models
+
 target_metadata = APP_METADATA
+
 
 def _resolve_url() -> str:
     if env := os.environ.get("ALEMBIC_ENV"):
         return get_database_setting(validate_database_environment(env)).database_url
     return migration_settings.database_url
+
 
 def process_revision_directives(context, revision, directives):
     x = getattr(context.config.cmd_opts, "x", None) or []
@@ -31,6 +32,7 @@ def process_revision_directives(context, revision, directives):
     if getattr(context.config.cmd_opts, "autogenerate", False):
         if directives[0].upgrade_ops.is_empty():
             directives[:] = []
+
 
 def run_migrations_offline() -> None:
     url = _resolve_url()

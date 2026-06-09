@@ -8,6 +8,7 @@ from migrations._cli.app import migrate
 
 app = Typer(pretty_exceptions_show_locals=False)
 
+
 @app.command(help=f"Create models, validators, and typeddicts from {SQL_DIR}")
 def g(
     dry_run: Annotated[

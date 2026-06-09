@@ -137,7 +137,7 @@ def init():
         raise typer.Exit(1)
     with migrations_database():
         sh(
-            f'alembic -x initial=true revision --autogenerate -m "initial"',
+            'alembic -x initial=true revision --autogenerate -m "initial"',
             check=True,
         )
         _pytest(throw=True)

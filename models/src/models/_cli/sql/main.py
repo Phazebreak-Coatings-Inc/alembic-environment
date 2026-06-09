@@ -1,17 +1,12 @@
 from pathlib import Path
 from typing import Literal
-import uuid
 import inflection
 from migrations.utils import migration_settings as m
 from migrations._cli.app import migrations_database
 from sqlalchemy import MetaData
-from sqlacodegen.generators import SQLModelGenerator, DeclarativeGenerator
+from sqlacodegen.generators import SQLModelGenerator
 import ast
 import subprocess
-import tempfile
-from collections.abc import Callable
-from pathlib import Path
-from contextlib import contextmanager
 import copy
 
 MODELS_DIR = Path(__file__).parent.parent.parent
@@ -116,7 +111,12 @@ class Model:
         )
 
     def class_to_init(self) -> str:
-        names = [f"{self.name}Base", f"{self.name}Validator", f"{self.name}Dict", self.name]
+        names = [
+            f"{self.name}Base",
+            f"{self.name}Validator",
+            f"{self.name}Dict",
+            self.name,
+        ]
         imports = (
             f"from .base import {self.name}Base\n"
             f"from .validator import {self.name}Validator\n"
@@ -179,7 +179,9 @@ class SQLGenerator:
                 "typeddict": model.class_to_typeddict(),
             }
             for kind, body in sources.items():
-                model.get_path(kind).write_text(ruff_format(f"{self.header}\n\n\n{body}"))
+                model.get_path(kind).write_text(
+                    ruff_format(f"{self.header}\n\n\n{body}")
+                )
 
             model_path = model.get_path("model")
             if not model_path.exists():

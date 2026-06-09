@@ -12,7 +12,6 @@ from sqlalchemy import (
 from sqlmodel import Field, SQLModel
 
 
-from sqlmodel import SQLModel, Field, Relationship
 
 
 class UsersBase(SQLModel):
