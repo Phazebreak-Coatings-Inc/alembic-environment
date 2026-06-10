@@ -5,7 +5,20 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+    "alembic>=1.18.4",
     "copier>=9.15.1",
+    "inflection>=0.5.1",
+    "migrations",
+    "models",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.14.1",
+    "pytest>=9.0.3",
+    "pytest-alembic>=0.12.1",
+    "ruff>=0.15.15",
+    "sqlacodegen>=4.0.3",
+    "sqlalchemy>=2.0.50",
+    "sqlmodel>=0.0.38",
+    "tomlkit>=0.15.0",
     "typer>=0.26.6",
 ]
 
