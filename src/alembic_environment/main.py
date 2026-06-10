@@ -9,8 +9,6 @@ app = Typer(pretty_exceptions_show_locals=False)
 @app.command()
 def init(dest="."):
     copier.run_copy("gh:Phazebreak-Coatings-Inc/alembic-environment", dest)
-    repair()
-
 
 @app.command()
 def update(abort: bool = False):
@@ -30,6 +28,6 @@ def update(abort: bool = False):
             subprocess.run("git clean -d -i", shell=True, check=True)
     repair()
 
-
 @app.command()
-def repair(): ...
+def repair():
+    ... 

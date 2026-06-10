@@ -5,11 +5,32 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "alembic>=1.18.4",
     "copier>=9.15.1",
+    "typer>=0.26.6",
+]
+
+[project.urls]
+Homepage = "https://github.com/Phazebreak-Coatings-Inc/alembic-environment"
+Documentation = "https://phazebreak-coatings-inc.github.io/alembic-environment/"
+Repository = "https://github.com/Phazebreak-Coatings-Inc/alembic-environment"
+
+[build-system]
+requires = ["uv_build>=0.11.18,<0.12"]
+build-backend = "uv_build"
+
+[tool.uv.workspace]
+members = ["models", "migrations"]
+
+[tool.uv.sources]
+models = { workspace = true }
+migrations = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "debugpy>=1.8.21",
+    "alembic>=1.18.4",
     "sqlalchemy>=2.0.50",
     "sqlmodel>=0.0.38",
-    "typer>=0.26.6",
     "models",
     "migrations",
     "pytest-alembic>=0.12.1",
@@ -22,15 +43,6 @@ dependencies = [
     "inflection>=0.5.1",
 ]
 
-[tool.uv.workspace]
-members = ["models", "migrations"]
-
-[tool.uv.sources]
-models = { workspace = true }
-migrations = { workspace = true }
-
-[dependency-groups]
-dev = [
-    "debugpy>=1.8.21",
+docs = [
+    "zensical>=0.0.43"
 ]
-docs = ["zensical>=0.0.43",]

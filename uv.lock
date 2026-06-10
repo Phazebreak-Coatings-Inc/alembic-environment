@@ -26,10 +26,16 @@ wheels = [
 [[package]]
 name = "alembic-environment"
 version = "0.1.0"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
-    { name = "alembic" },
     { name = "copier" },
+    { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "alembic" },
+    { name = "debugpy" },
     { name = "inflection" },
     { name = "migrations" },
     { name = "models" },
@@ -42,12 +48,6 @@ dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
     { name = "tomlkit" },
-    { name = "typer" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "debugpy" },
 ]
 docs = [
     { name = "zensical" },
@@ -55,8 +55,14 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alembic", specifier = ">=1.18.4" },
     { name = "copier", specifier = ">=9.15.1" },
+    { name = "typer", specifier = ">=0.26.6" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "alembic", specifier = ">=1.18.4" },
+    { name = "debugpy", specifier = ">=1.8.21" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "migrations", editable = "migrations" },
     { name = "models", editable = "models" },
@@ -69,11 +75,7 @@ requires-dist = [
     { name = "sqlalchemy", specifier = ">=2.0.50" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
     { name = "tomlkit", specifier = ">=0.15.0" },
-    { name = "typer", specifier = ">=0.26.6" },
 ]
-
-[package.metadata.requires-dev]
-dev = [{ name = "debugpy", specifier = ">=1.8.21" }]
 docs = [{ name = "zensical", specifier = ">=0.0.43" }]
 
 [[package]]
