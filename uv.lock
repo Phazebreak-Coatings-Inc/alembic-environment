@@ -25,23 +25,10 @@ wheels = [
 
 [[package]]
 name = "alembic-environment"
-version = "0.1.1"
+version = "0.1.3"
 source = { editable = "." }
 dependencies = [
-    { name = "alembic" },
     { name = "copier" },
-    { name = "inflection" },
-    { name = "migrations" },
-    { name = "models" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic-settings" },
-    { name = "pytest" },
-    { name = "pytest-alembic" },
-    { name = "ruff" },
-    { name = "sqlacodegen" },
-    { name = "sqlalchemy" },
-    { name = "sqlmodel" },
-    { name = "tomlkit" },
     { name = "typer" },
 ]
 
@@ -68,20 +55,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
-    { name = "alembic", specifier = ">=1.18.4" },
     { name = "copier", specifier = ">=9.15.1" },
-    { name = "inflection", specifier = ">=0.5.1" },
-    { name = "migrations", editable = "migrations" },
-    { name = "models", editable = "models" },
-    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
-    { name = "pydantic-settings", specifier = ">=2.14.1" },
-    { name = "pytest", specifier = ">=9.0.3" },
-    { name = "pytest-alembic", specifier = ">=0.12.1" },
-    { name = "ruff", specifier = ">=0.15.15" },
-    { name = "sqlacodegen", specifier = ">=4.0.3" },
-    { name = "sqlalchemy", specifier = ">=2.0.50" },
-    { name = "sqlmodel", specifier = ">=0.0.38" },
-    { name = "tomlkit", specifier = ">=0.15.0" },
     { name = "typer", specifier = ">=0.26.6" },
 ]
 
