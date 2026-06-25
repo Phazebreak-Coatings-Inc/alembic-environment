@@ -4,7 +4,7 @@ import copier
 import typer
 import subprocess
 from pathlib import Path
-
+import tomlkit
    
 WORKSPACES = ["models", "migrations"]
 
@@ -23,6 +23,31 @@ PACKAGES = [
     "sqlacodegen>=4.0.3",
     "inflection>=0.5.1",
 ]
+
+def ensure_workspace(pyproject_path: Path, members=WORKSPACES):
+    doc = tomlkit.parse(pyproject_path.read_text())
+
+    tool = doc.setdefault("tool", tomlkit.table())
+    uv = tool.setdefault("uv", tomlkit.table())
+
+    ws = uv.setdefault("workspace", tomlkit.table())
+    existing = list(ws.get("members", []))
+    arr = tomlkit.array()
+    for m in existing + [m for m in members if m not in existing]:
+        arr.append(m)
+    ws["members"] = arr
+
+    sources = uv.setdefault("sources", tomlkit.table())
+    for m in members:
+        if m not in sources:
+            it = tomlkit.inline_table()
+            it["workspace"] = True
+            sources[m] = it
+
+    pyproject_path.write_text(tomlkit.dumps(doc))
+
+
+
 app = Typer(pretty_exceptions_show_locals=False)
 
 def sh(cmd: str, check=True, **kwargs):
