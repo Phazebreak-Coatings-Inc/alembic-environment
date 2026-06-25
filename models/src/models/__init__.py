@@ -8,5 +8,5 @@ __all__ = [
     "MODELS_DIR",
     "INIT_FILE",
     "SQL_DIR",
-    "FileKind"
+    "FileKind",
 ]

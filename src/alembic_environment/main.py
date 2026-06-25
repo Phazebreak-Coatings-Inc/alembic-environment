@@ -5,7 +5,11 @@ import typer
 import subprocess
 from pathlib import Path
 import tomlkit
-   
+
+type PyProject = tomlkit.TOMLDocument
+
+type WorkspaceMembers = list[str]
+
 WORKSPACES = ["models", "migrations"]
 
 PACKAGES = [
@@ -24,50 +28,78 @@ PACKAGES = [
     "inflection>=0.5.1",
 ]
 
-def ensure_workspace(pyproject_path: Path, members=WORKSPACES):
-    doc = tomlkit.parse(pyproject_path.read_text())
-
-    tool = doc.setdefault("tool", tomlkit.table())
-    uv = tool.setdefault("uv", tomlkit.table())
-
-    ws = uv.setdefault("workspace", tomlkit.table())
-    existing = list(ws.get("members", []))
-    arr = tomlkit.array()
-    for m in existing + [m for m in members if m not in existing]:
-        arr.append(m)
-    ws["members"] = arr
-
-    sources = uv.setdefault("sources", tomlkit.table())
-    for m in members:
-        if m not in sources:
-            it = tomlkit.inline_table()
-            it["workspace"] = True
-            sources[m] = it
-
-    pyproject_path.write_text(tomlkit.dumps(doc))
-
-
-
-app = Typer(pretty_exceptions_show_locals=False)
 
 def sh(cmd: str, check=True, **kwargs):
     try:
         subprocess.run(cmd, shell=True, check=check, **kwargs)
     except subprocess.CalledProcessError as e:
         typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(e.returncode) from None  #
+        raise typer.Exit(e.returncode) from None
+
+
+def get_pyproject(cwd: Path) -> tomlkit.TOMLDocument:
+    p = cwd / "pyproject.toml"
+    s = f"'pyproject'.toml not found at {p}"
+
+    if not p.exists():
+        if typer.confirm(f"{s}: Initialize a new uv project?", abort=True):
+            sh("uv init")
+            if not p.exists():
+                raise FileNotFoundError(s)
+    return tomlkit.parse(p.read_text())
+
+
+def add_workspaces(p: PyProject, members: WorkspaceMembers) -> PyProject:
+    def sd(t, name):
+        return t.setdefault(name, tomlkit.table())
+    uv = sd(sd(p, "tool"), "uv")
+    ws = sd(uv, "workspace")
+    ext = list(ws.get("members", []))
+
+    arr = tomlkit.array()
+    for m in ext + [m for m in members if m not in ext]:
+        arr.append(m)
+    ws["members"] = arr
+
+    sources = sd(uv, "sources")
+    for m in members:
+        if m not in sources:
+            it = tomlkit.inline_table()
+            it["workspace"] = True
+            sources[m] = it
+
+    return p
+
+
+def write_pyproject(cwd: Path, p: PyProject) -> None:
+    (cwd / "pyproject.toml").write_text(tomlkit.dumps(p))
+
+
+app = Typer(pretty_exceptions_show_locals=False)
+
 
 @app.command(help="Initialize a new alembic-environment project.")
-def init(dest: Annotated[str, typer.Argument(help="Directory to initialize project in.")] = "."):
-    dest_path = Path(dest).resolve()
-    pyproject_path = dest_path / "pyproject.toml"
-    if not pyproject_path.exists():
-        sh("uv init")
+def init(
+    dest: Annotated[
+        str, typer.Argument(help="Directory to initialize project in.")
+    ] = ".",
+):
+    get_pyproject(Path(dest).resolve())
     copier.run_copy("gh:Phazebreak-Coatings-Inc/alembic-environment", dest)
-    repair()
+    repair(dest)
+
 
 @app.command(help="Update an existing alembic-environment project.")
-def update(abort: Annotated[bool, typer.Option("--abort", "-a", help="If the abort flag is triggered, this will reset the attempt to update the copier project. Prudent when the changes are too much to resolve.")] = False):
+def update(
+    abort: Annotated[
+        bool,
+        typer.Option(
+            "--abort",
+            "-a",
+            help="If the abort flag is triggered, this will reset the attempt to update the copier project. Prudent when the changes are too much to resolve.",
+        ),
+    ] = False,
+):
     match abort:
         case False:
             typer.confirm(
@@ -78,17 +110,24 @@ def update(abort: Annotated[bool, typer.Option("--abort", "-a", help="If the abo
         case True:
             typer.confirm(
                 "Are you sure you want to abort? This will trigger a 'git reset.'",
-                abort=True
+                abort=True,
             )
             subprocess.run("git reset", shell=True, check=True)
             subprocess.run("git checkout .", shell=True, check=True)
             subprocess.run("git clean -d -i", shell=True, check=True)
     repair()
 
+
 @app.command(help="Hook up dependencies and workspaces correctly.")
-def repair():
-    print("Adding dependencies and workspaces ...")
+def repair(
+    cwd: Annotated[
+        str, typer.Argument(help="Directory to initialize project in.")
+    ] = ".",
+):
+    print("Syncing dependencies and workspaces ...")
+    p = Path(cwd).resolve()
+    write_pyproject(p, add_workspaces(get_pyproject(p), WORKSPACES))
     sh("uv sync")
-    sh(f'uv add --workspace {" ".join(WORKSPACES)}')
-    sh(f'uv add {" ".join(PACKAGES)}')
+    sh(f"uv add --workspace {' '.join(WORKSPACES)}")
+    sh(f"uv add {' '.join(PACKAGES)}")
     print("Repair completed successfully.")
