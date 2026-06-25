@@ -1,3 +1,4 @@
+_answers_file: .alembic-environment-answers.yml
 _exclude:
   - "*.bar"
   - "*.env"
