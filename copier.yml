@@ -10,7 +10,7 @@ _exclude:
   - ".pytest_cache/"
   - ".venv/"
   - "/.github/workflows/docs.yml"
-  - "/.github/workflows/alembic-migrations.yml"
+  - "/.github/workflows/release.yml"
   - "/LICENSE"
   - "/README.md"
   - "/cache/"
