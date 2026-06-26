@@ -1,13 +1,14 @@
-from logging.config import fileConfig
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
 import os
+from logging.config import fileConfig
+
+from alembic import context
+from sqlalchemy import engine_from_config, pool
+
 from migrations.utils import (
-    migration_settings,
     get_database_setting,
+    migration_settings,
     validate_database_environment,
 )
-from alembic import context
 
 config = context.config
 

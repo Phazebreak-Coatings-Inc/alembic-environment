@@ -1,14 +1,19 @@
-from typer import Typer
-from typing import Annotated
-import copier
-import typer
 import subprocess
 from pathlib import Path
+from typing import Annotated
+
+import copier
 import tomlkit
+import typer
+from typer import Typer
 
 type PyProject = tomlkit.TOMLDocument
 
 type WorkspaceMembers = list[str]
+
+COPIER_REPO = "gh:Phazebreak-Coatings-Inc/alembic-environment"
+
+ANSWERS_FILE = ".alembic-environment-answers.yml"
 
 WORKSPACES = ["models", "migrations"]
 
@@ -52,6 +57,7 @@ def get_pyproject(cwd: Path) -> tomlkit.TOMLDocument:
 def add_workspaces(p: PyProject, members: WorkspaceMembers) -> PyProject:
     def sd(t, name):
         return t.setdefault(name, tomlkit.table())
+
     uv = sd(sd(p, "tool"), "uv")
     ws = sd(uv, "workspace")
     ext = list(ws.get("members", []))
@@ -85,7 +91,7 @@ def init(
     ] = ".",
 ):
     get_pyproject(Path(dest).resolve())
-    copier.run_copy("gh:Phazebreak-Coatings-Inc/alembic-environment", dest)
+    copier.run_copy(COPIER_REPO, dest)
     repair(dest)
 
 
@@ -106,15 +112,15 @@ def update(
                 "Are you sure you want to update? If you need to abort mid-update, it will trigger a 'git reset.' Make sure to save all uncommitted changes.",
                 abort=True,
             )
-            subprocess.run("copier update --conflict inline", shell=True, check=True)
+            sh(f"copier update -a {ANSWERS_FILE} --conflict inline")
         case True:
             typer.confirm(
                 "Are you sure you want to abort? This will trigger a 'git reset.'",
                 abort=True,
             )
-            subprocess.run("git reset", shell=True, check=True)
-            subprocess.run("git checkout .", shell=True, check=True)
-            subprocess.run("git clean -d -i", shell=True, check=True)
+            sh("git reset")
+            sh("git checkout .")
+            sh("git clean -d -i")
     repair()
 
 
