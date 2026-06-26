@@ -104,13 +104,15 @@ def alembic_migrate(message: str = ""):
         check=True,
     )
 
+
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
 )
 def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
     with migrations_database():
-        alembic_migrate(message) 
+        alembic_migrate(message)
         alembic_test(throw=True)
+
 
 @app.command(help="Apply reviewed migrations to an environment.")
 def apply(
@@ -120,6 +122,7 @@ def apply(
     typer.confirm(f"Upgrade {env} to {target}?", abort=True)
     alembic("upgrade target", env)
 
+
 def alembic_check():
     sh("alembic upgrade head")
     try:
@@ -127,10 +130,12 @@ def alembic_check():
     except subprocess.CalledProcessError as e:
         raise typer.Exit(e.returncode) from None
 
+
 @app.command(help="Check if the database needs to be migrated.")
 def check():
     with migrations_database():
         alembic_check()
+
 
 @app.command(help="Generate the first (baseline) revision, even if empty.")
 def init():
