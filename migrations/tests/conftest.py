@@ -1,6 +1,7 @@
 import pytest
-from migrations import migration_settings
 from pytest_alembic.config import Config
+
+from migrations import migration_settings
 
 
 @pytest.fixture

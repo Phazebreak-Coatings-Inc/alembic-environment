@@ -1,70 +1,56 @@
-import typer
 import os
-from typer import Typer
-import subprocess
-from ..utils import (
-    migration_settings as m,
-    validate_database_environment,
-    ValidDatabaseEnvironments,
-    alembic_settings,
-)
-from typing import Annotated
-from .seeding import execute_seeds
-from .seeding.main import seed_registry
-import time
-from alembic.config import Config
-from alembic.script import ScriptDirectory
 from contextlib import contextmanager
+from pathlib import Path
+from typing import Annotated
 
-app = Typer(pretty_exceptions_show_locals=False)
-EnvArg = Annotated[
-    ValidDatabaseEnvironments,
-    typer.Argument(help="Choose which environment to seed for."),
-]
+import typer
 
+from migrations._cli.seeding.main import SEEDS_DIRECTORY
+from migrations.utils import (
+    app,
+    DryRun,
+    EnvArg,
+    VerboseOption,
+    _heads,
+    _pytest,
+    _wait_for_db,
+    alembic_env,
+    run_steps,
+    sh,
+    validate_database_environment,
+)
+from migrations.utils import (
+    migration_settings as m,
+)
 
-def sh(cmd: str, check=True, **kwargs):
-    try:
-        subprocess.run(cmd, shell=True, check=check, **kwargs)
-    except subprocess.CalledProcessError as e:
-        typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(e.returncode) from None  #
-
-
-def _pytest(throw: bool = False):
-    sh("pytest", check=throw)
-
-
-def _heads() -> list[str]:
-    return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
-
-
-def _wait_for_db(engine, attempts: int = 60, delay: float = 0.5):
-    for _ in range(attempts):
-        try:
-            with engine.connect() as c:
-                c.exec_driver_sql("SELECT 1")
-            return
-        except Exception:
-            time.sleep(delay)
-    raise RuntimeError("database never accepted connections")
+from .seeding import execute_seeds, generate_seed_file
+from .seeding.main import seed_registry
 
 
 @app.command(
     help="Start up the migrations database for autogenerating alembic revisions."
 )
-def up():
-    sh("docker pull postgres", check=True)
-    sh(
-        f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
-        check=True,
+def up(v: VerboseOption = False):
+    run_steps(
+        fns=[
+            lambda: sh("docker pull postgres", check=True, silent=not v),
+            lambda: sh(
+                f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
+                check=True,
+                silent=not v,
+            ),
+            lambda: _wait_for_db(engine=m.engine),
+        ],
+        label="Starting Migrations Database",
     )
-    _wait_for_db(engine=m.engine)
 
 
 @app.command(help="Shut down the migrations database.")
 def down():
-    sh(f"docker rm -f {m.database_name}", check=True)
+    run_steps(
+        fns=[lambda: sh(f"docker rm -f {m.database_name}", check=True, silent=True)],
+        label="Shutting Down Migrations Database",
+    )
 
 
 @contextmanager
@@ -77,12 +63,30 @@ def migrations_database():
 
 
 @app.command(help="Seed the database with anything decorated with 'migrations.seed'.")
-def seed(env: EnvArg):
-    typer.confirm(
-        f"This action will run {seed_registry.count_seeds(env)} functions on environment '{env},' Are you sure you want to proceed?",
-        abort=True,
+def seed(
+    env: EnvArg,
+    n: Annotated[
+        str | None,
+        typer.Option(
+            "--generate",
+            "-g",
+            help=f"Generate a seed file with '--g {{ name }}' It will arrive in ...{Path(*SEEDS_DIRECTORY.parts[-4:])}. The environment variable is for specifying in what environment the seed should run.",
+        ),
+    ] = None,
+    d: DryRun = False,
+):
+    if n:
+        generate_seed_file(
+            env=env, 
+            name=n, 
+            dry_run=d
+        )
+        return
+    execute_seeds(
+        env=env, 
+        dry_run=d, 
+        confirm=True
     )
-    execute_seeds(env)
 
 
 @app.command(help="Test the alembic revisions generated.")
@@ -90,9 +94,10 @@ def test(
     throw: Annotated[
         bool, typer.Option("-t", "--throw", help="Raise on test failure.")
     ] = False,
+    seed: Annotated[bool, typer.Option("-s", "--seed", help="Test seed runs")] = False,
 ):
     with migrations_database():
-        _pytest(throw)
+        _pytest(typ="migrations" if not seed else "seeds", throw=throw)
 
 
 @app.command(
@@ -108,9 +113,6 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
             check=True,
         )
         _pytest(throw=True)
-
-
-alembic_env = alembic_settings.env
 
 
 @app.command(help="Apply reviewed migrations to an environment.")
