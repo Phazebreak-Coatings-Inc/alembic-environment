@@ -15,13 +15,14 @@ import time
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from contextlib import contextmanager
+from .seeding import generate_seed_file
 
+alembic_env = alembic_settings.env
 app = Typer(pretty_exceptions_show_locals=False)
 EnvArg = Annotated[
     ValidDatabaseEnvironments,
     typer.Argument(help="Choose which environment to seed for."),
 ]
-
 
 def sh(cmd: str, check=True, **kwargs):
     try:
@@ -84,7 +85,6 @@ def seed(env: EnvArg):
     )
     execute_seeds(env)
 
-
 @app.command(help="Test the alembic revisions generated.")
 def test(
     throw: Annotated[
@@ -108,9 +108,6 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
             check=True,
         )
         _pytest(throw=True)
-
-
-alembic_env = alembic_settings.env
 
 
 @app.command(help="Apply reviewed migrations to an environment.")

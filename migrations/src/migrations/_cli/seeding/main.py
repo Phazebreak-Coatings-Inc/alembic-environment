@@ -1,4 +1,5 @@
 from sqlmodel import Session
+from pathlib import Path
 from typing import Callable, get_type_hints
 from migrations.utils import (
     ValidDatabaseEnvironments,
@@ -6,13 +7,14 @@ from migrations.utils import (
     get_database_setting,
 )
 from collections import defaultdict
+import inflection
+
+SEEDS_DIRECTORY = Path(__file__).parent.parent.parent / "seeds"
 
 SeedFunction = Callable[[Session], None]
 SeedRegistry = dict[ValidDatabaseEnvironments, list[SeedFunction]]
 
-
 class SeedingException(Exception): ...
-
 
 class Seed:
     __seeds__: SeedRegistry = defaultdict(list)
@@ -43,7 +45,6 @@ class Seed:
 seed_registry = Seed()
 seed = seed_registry.seed
 
-
 def execute_seeds(env: ValidDatabaseEnvironments):
     env = validate_database_environment(env)
     with Session(get_database_setting(env).engine) as s:
@@ -53,3 +54,34 @@ def execute_seeds(env: ValidDatabaseEnvironments):
             except Exception as e:
                 raise SeedingException(f"Seeding failed for {fn.__name__}: {e}") from e
         s.commit()
+
+
+SEED_TEMPLATE = """
+from models import *
+from sqlmodel import Session
+from migrations import seed, {env}
+
+@seed({env})
+def {name}(session: Session) -> None:
+    ...
+"""
+
+SEED_TEST_TEMPLATE = """
+from migrations
+
+
+"""
+
+def generate_seed_file(name: str, env: ValidDatabaseEnvironments, w: bool = True):
+    n = inflection.underscore(name)
+    p = SEEDS_DIRECTORY / f"{n}.py"
+    if w:
+        p.write_text(t := SEED_TEMPLATE.format(
+            env=env,
+            name=n
+        ))
+    print(f"Generated new seed file to {p}: \n{t}")
+
+#def generate_seed_test() ...
+
+#def repair_seeds() ...

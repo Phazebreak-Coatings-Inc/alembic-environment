@@ -12,6 +12,7 @@ _exclude:
   - ".venv/"
   - "/.github/workflows/docs.yml"
   - "/.github/workflows/release.yml"
+  - "/.github/workflows/dependabot.yml"
   - "/LICENSE"
   - "/README.md"
   - "/cache/"
