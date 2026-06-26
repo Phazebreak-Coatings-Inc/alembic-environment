@@ -94,6 +94,10 @@ def test(
     with migrations_database():
         _pytest(throw)
 
+@app.command(help="Check if a migration is needed")
+def check():
+    with migrations_database():
+       sh("alembic check") 
 
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
