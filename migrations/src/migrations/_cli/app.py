@@ -149,8 +149,15 @@ def init():
         alembic_test(throw=True)
 
 
-@app.command(help="Run a autonomous CICD workflow that checks for drift, tests, and commits to a separate branch with a pull-request.")
-def cicd(exclude: Annotated[list[str], typer.Option("--exclude", "-e", help="Exclude from being run on certain envs")]):
+@app.command(
+    help="Run a autonomous CICD workflow that checks for drift, tests, and commits to a separate branch with a pull-request."
+)
+def cicd(
+    exclude: Annotated[
+        list[str],
+        typer.Option("--exclude", "-e", help="Exclude from being run on certain envs"),
+    ],
+):
     with migrations_database():
         try:
             alembic_check()
@@ -161,7 +168,7 @@ def cicd(exclude: Annotated[list[str], typer.Option("--exclude", "-e", help="Exc
                 sh('alembic merge -m "merge heads" heads')
             sh("alembic upgrade head", check=True)
             sh(
-                f'alembic revision --autogenerate -m auto',
+                f"alembic revision --autogenerate -m auto",
                 check=True,
             )
         try:
@@ -173,9 +180,14 @@ def cicd(exclude: Annotated[list[str], typer.Option("--exclude", "-e", help="Exc
             sh(f"gh pr create --fill --base main --head {b}")
 
         except Exception as e:
-            raise Exception(f"Error creating a separate branch and PR with new migrations: {e}")
+            raise Exception(
+                f"Error creating a separate branch and PR with new migrations: {e}"
+            )
 
-@app.command(help="Apply migrations to staging and prod. Only use this once the migrations are actually on main, else you could have broken versioning.")
+
+@app.command(
+    help="Apply migrations to staging and prod. Only use this once the migrations are actually on main, else you could have broken versioning."
+)
 def cicd_apply():
     for env in ["staging", "prod"]:
-        apply(env) #type: ignore
+        apply(env)  # type: ignore
