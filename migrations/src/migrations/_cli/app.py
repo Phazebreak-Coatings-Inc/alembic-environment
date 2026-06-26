@@ -18,13 +18,13 @@ from migrations.utils import (
     run_steps,
     sh,
     validate_database_environment,
+    alembic,
 )
 from migrations.utils import (
     migration_settings as m,
 )
 
 from .seeding import execute_seeds, generate_seed_file
-from .seeding.main import seed_registry
 
 
 @app.command(
@@ -99,11 +99,6 @@ def test(
     with migrations_database():
         _pytest(typ="migrations" if not seed else "seeds", throw=throw)
 
-@app.command(help="Check if a migration is needed")
-def check():
-    with migrations_database():
-       sh("alembic check") 
-
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
 )
@@ -118,19 +113,19 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
         )
         _pytest(throw=True)
 
-
 @app.command(help="Apply reviewed migrations to an environment.")
 def apply(
     env: EnvArg = alembic_env,
     target: str = "head",
 ):
     typer.confirm(f"Upgrade {env} to {target}?", abort=True)
-    sh(
-        "alembic upgrade target",
-        check=True,
-        env={**os.environ, "alembic_env": validate_database_environment(env)},
-    )
+    alembic("upgrade target", env)
 
+@app.command(help="Check if the database needs to be migrated.")
+def check():
+    with migrations_database():
+        sh("alembic upgrade head", check=True)
+        sh("alembic check", check=True)
 
 @app.command(help="Generate the first (baseline) revision, even if empty.")
 def init():
@@ -147,3 +142,7 @@ def init():
             check=True,
         )
         _pytest(throw=True)
+
+@app.command(help="Run a autonomous workflow that checks for drift, tests, and commits to a separate branch with a pull-request.")
+def cicd():
+    ...
