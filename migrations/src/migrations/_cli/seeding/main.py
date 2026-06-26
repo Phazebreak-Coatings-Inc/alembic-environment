@@ -82,6 +82,4 @@ def generate_seed_file(name: str, env: ValidDatabaseEnvironments, w: bool = True
         ))
     print(f"Generated new seed file to {p}: \n{t}")
 
-#def generate_seed_test() ...
-
 #def repair_seeds() ...

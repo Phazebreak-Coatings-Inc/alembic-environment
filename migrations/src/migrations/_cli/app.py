@@ -1,4 +1,5 @@
 import typer
+from typing import Callable
 import os
 from typer import Typer
 import subprocess
@@ -16,6 +17,8 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from contextlib import contextmanager
 from .seeding import generate_seed_file
+from typing import Literal
+from pathlib import Path
 
 alembic_env = alembic_settings.env
 app = Typer(pretty_exceptions_show_locals=False)
@@ -24,21 +27,25 @@ EnvArg = Annotated[
     typer.Argument(help="Choose which environment to seed for."),
 ]
 
-def sh(cmd: str, check=True, **kwargs):
+def sh(cmd: str, silent=False, check=True, **kwargs):
+    if silent:
+        kwargs.setdefault("stdout", subprocess.DEVNULL)
+        kwargs.setdefault("stderr", subprocess.DEVNULL)
     try:
         subprocess.run(cmd, shell=True, check=check, **kwargs)
     except subprocess.CalledProcessError as e:
         typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None  #
 
+type TestTypes = Literal["all", "migrations", "seeds"]
 
-def _pytest(throw: bool = False):
-    sh("pytest", check=throw)
+TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests" 
 
+def _pytest(typ: TestTypes = "all", throw: bool = False):
+    sh("pytest" if typ == "all" else f"pytest test_{typ}.py", check=throw)
 
 def _heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
-
 
 def _wait_for_db(engine, attempts: int = 60, delay: float = 0.5):
     for _ in range(attempts):
@@ -50,22 +57,47 @@ def _wait_for_db(engine, attempts: int = 60, delay: float = 0.5):
             time.sleep(delay)
     raise RuntimeError("database never accepted connections")
 
+VerboseOption = Annotated[bool, typer.Option("-v", "--verbose", help="Run in verbose mode.")]
+
+def run_steps(fns: list[Callable] = list(), label: str | None = None):
+    with typer.progressbar(fns, label=label, width=min(len(fns), 34), show_percent=True) as s:
+        for fn in s:
+            fn()
 
 @app.command(
     help="Start up the migrations database for autogenerating alembic revisions."
 )
-def up():
-    sh("docker pull postgres", check=True)
-    sh(
-        f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
-        check=True,
+def up(v: VerboseOption = False):
+    run_steps(
+        fns=[
+            lambda: sh(
+                "docker pull postgres", 
+                check=True,
+                silent=not v
+            ),
+            lambda: sh(
+                f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
+                check=True, 
+                silent=not v
+            ),
+            lambda: _wait_for_db(engine=m.engine)
+        ], 
+        label="Starting Migrations Database"
     )
-    _wait_for_db(engine=m.engine)
-
 
 @app.command(help="Shut down the migrations database.")
 def down():
-    sh(f"docker rm -f {m.database_name}", check=True)
+    run_steps(
+        fns=[
+            lambda: sh(
+                f"docker rm -f {m.database_name}", 
+                check=True,
+                silent=True
+            )
+        ], 
+        label="Shutting Down Migrations Database"
+    )
+    
 
 
 @contextmanager
@@ -90,10 +122,15 @@ def test(
     throw: Annotated[
         bool, typer.Option("-t", "--throw", help="Raise on test failure.")
     ] = False,
+    seed: Annotated[
+        bool, typer.Option("-s", "--seed", help="Test seed runs")
+    ] = False,
 ):
     with migrations_database():
-        _pytest(throw)
-
+        _pytest(
+            typ="migrations" if not seed else "seeds",
+            throw=throw
+        )
 
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
