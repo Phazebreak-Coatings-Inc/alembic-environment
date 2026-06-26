@@ -92,7 +92,7 @@ def test(
     seed: Annotated[bool, typer.Option("-s", "--seed", help="Test seed runs")] = False,
 ):
     with migrations_database():
-        _pytest(typ="migrations" if not seed else "seeds", throw=throw)
+        alembic_test(typ="migrations" if not seed else "seeds", throw=throw)
 
 
 def alembic_migrate(message: str = ""):
