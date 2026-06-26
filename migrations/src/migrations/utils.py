@@ -14,7 +14,7 @@ DEV_ENV = ".env.dev"
 STAGING_ENV = ".env.staging"
 PROD_ENV = ".env.prod"
 ValidDatabaseEnvironments = Literal["dev", "staging", "prod"]
-
+ENVS = ["dev", "staging", "prod"]
 
 def validate_database_environment(env: str) -> ValidDatabaseEnvironments:
     if env not in (envs := ["dev", "staging", "prod"]):

@@ -1,4 +1,5 @@
 import os
+import uuid
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
@@ -7,6 +8,7 @@ import typer
 
 from migrations._cli.seeding.main import SEEDS_DIRECTORY
 from migrations.utils import (
+    ENVS,
     app,
     DryRun,
     EnvArg,
@@ -140,7 +142,34 @@ def init():
         _pytest(throw=True)
 
 
-@app.command(
-    help="Run a autonomous workflow that checks for drift, tests, and commits to a separate branch with a pull-request."
-)
-def cicd(): ...
+@app.command(help="Run a autonomous CICD workflow that checks for drift, tests, and commits to a separate branch with a pull-request.")
+def cicd(exclude: Annotated[list[str], typer.Option("--exclude", "-e", help="Exclude from being run on certain envs")]):
+    with migrations_database():
+        sh("alembic upgrade head", check=True)
+        try:
+            sh("alembic check", check=True)
+            _pytest(throw=False)
+            return
+        except Exception as e:
+            if len(_heads()) > 1:
+                sh('alembic merge -m "merge heads" heads')
+            sh("alembic upgrade head", check=True)
+            sh(
+                f'alembic revision --autogenerate -m auto',
+                check=True,
+            )
+        try:
+            b = f"cicd/alembic-migration-{uuid.uuid4()}"
+            sh(f"git switch -c {b}")
+            sh("uvx ruff format .")
+            sh("git commit -a")
+            sh("git push")
+            sh(f"gh pr create --fill --base main --head {b}")
+
+        except Exception as e:
+            raise Exception(f"Error creating a separate branch and PR with new migrations: {e}")
+
+@app.command(help="Apply migrations to staging and prod. Only use this once the migrations are actually on main, else you could have broken versioning.")
+def cicd_apply():
+    for env in ["staging", "prod"]:
+        apply(env) #type: ignore
