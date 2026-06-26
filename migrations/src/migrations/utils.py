@@ -134,7 +134,7 @@ type TestTypes = Literal["all", "migrations", "seeds"]
 TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests"
 
 
-def _pytest(typ: TestTypes = "all", throw: bool = False):
+def alembic_test(typ: TestTypes = "all", throw: bool = False):
     sh("pytest" if typ == "all" else f"pytest test_{typ}.py", check=throw)
 
 

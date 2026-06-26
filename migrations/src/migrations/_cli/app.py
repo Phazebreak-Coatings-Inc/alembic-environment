@@ -1,4 +1,5 @@
 import os
+import subprocess
 import uuid
 from contextlib import contextmanager
 from pathlib import Path
@@ -14,7 +15,7 @@ from migrations.utils import (
     EnvArg,
     VerboseOption,
     _heads,
-    _pytest,
+    alembic_test,
     _wait_for_db,
     alembic_env,
     run_steps,
@@ -94,20 +95,22 @@ def test(
         _pytest(typ="migrations" if not seed else "seeds", throw=throw)
 
 
+def alembic_migrate(message: str = ""):
+    if len(_heads()) > 1:
+        sh('alembic merge -m "merge heads" heads')
+    sh("alembic upgrade head", check=True)
+    sh(
+        f'alembic revision --autogenerate -m "{message or "auto"}"',
+        check=True,
+    )
+
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
 )
 def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
     with migrations_database():
-        if len(_heads()) > 1:
-            sh('alembic merge -m "merge heads" heads')
-        sh("alembic upgrade head", check=True)
-        sh(
-            f'alembic revision --autogenerate -m "{message or "auto"}"',
-            check=True,
-        )
-        _pytest(throw=True)
-
+        alembic_migrate(message) 
+        alembic_test(throw=True)
 
 @app.command(help="Apply reviewed migrations to an environment.")
 def apply(
@@ -117,13 +120,17 @@ def apply(
     typer.confirm(f"Upgrade {env} to {target}?", abort=True)
     alembic("upgrade target", env)
 
+def alembic_check():
+    sh("alembic upgrade head")
+    try:
+        sh("alembic check", check=True)
+    except subprocess.CalledProcessError as e:
+        raise typer.Exit(e.returncode) from None
 
 @app.command(help="Check if the database needs to be migrated.")
 def check():
     with migrations_database():
-        sh("alembic upgrade head", check=True)
-        sh("alembic check", check=True)
-
+        alembic_check()
 
 @app.command(help="Generate the first (baseline) revision, even if empty.")
 def init():
@@ -139,18 +146,17 @@ def init():
             'alembic -x initial=true revision --autogenerate -m "initial"',
             check=True,
         )
-        _pytest(throw=True)
+        alembic_test(throw=True)
 
 
 @app.command(help="Run a autonomous CICD workflow that checks for drift, tests, and commits to a separate branch with a pull-request.")
 def cicd(exclude: Annotated[list[str], typer.Option("--exclude", "-e", help="Exclude from being run on certain envs")]):
     with migrations_database():
-        sh("alembic upgrade head", check=True)
         try:
-            sh("alembic check", check=True)
-            _pytest(throw=False)
+            alembic_check()
+            alembic_test(throw=False)
             return
-        except Exception as e:
+        except subprocess.CalledProcessError as e:
             if len(_heads()) > 1:
                 sh('alembic merge -m "merge heads" heads')
             sh("alembic upgrade head", check=True)
