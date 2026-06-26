@@ -13,6 +13,7 @@ _exclude:
   - "/.github/workflows/docs.yml"
   - "/.github/workflows/release.yml"
   - "/.github/workflows/dependabot.yml"
+  - "/.github/workflows/format.yml"
   - "/LICENSE"
   - "/README.md"
   - "/cache/"
