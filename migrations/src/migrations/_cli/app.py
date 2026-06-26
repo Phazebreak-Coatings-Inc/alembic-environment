@@ -76,17 +76,9 @@ def seed(
     d: DryRun = False,
 ):
     if n:
-        generate_seed_file(
-            env=env, 
-            name=n, 
-            dry_run=d
-        )
+        generate_seed_file(env=env, name=n, dry_run=d)
         return
-    execute_seeds(
-        env=env, 
-        dry_run=d, 
-        confirm=True
-    )
+    execute_seeds(env=env, dry_run=d, confirm=True)
 
 
 @app.command(help="Test the alembic revisions generated.")
@@ -98,6 +90,7 @@ def test(
 ):
     with migrations_database():
         _pytest(typ="migrations" if not seed else "seeds", throw=throw)
+
 
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
@@ -113,6 +106,7 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
         )
         _pytest(throw=True)
 
+
 @app.command(help="Apply reviewed migrations to an environment.")
 def apply(
     env: EnvArg = alembic_env,
@@ -121,11 +115,13 @@ def apply(
     typer.confirm(f"Upgrade {env} to {target}?", abort=True)
     alembic("upgrade target", env)
 
+
 @app.command(help="Check if the database needs to be migrated.")
 def check():
     with migrations_database():
         sh("alembic upgrade head", check=True)
         sh("alembic check", check=True)
+
 
 @app.command(help="Generate the first (baseline) revision, even if empty.")
 def init():
@@ -143,6 +139,8 @@ def init():
         )
         _pytest(throw=True)
 
-@app.command(help="Run a autonomous workflow that checks for drift, tests, and commits to a separate branch with a pull-request.")
-def cicd():
-    ...
+
+@app.command(
+    help="Run a autonomous workflow that checks for drift, tests, and commits to a separate branch with a pull-request."
+)
+def cicd(): ...

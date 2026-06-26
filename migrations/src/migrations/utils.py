@@ -120,12 +120,14 @@ def sh(cmd: str, silent=False, check=True, **kwargs):
         typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None  #
 
-def alembic(cmd: str, env: ValidDatabaseEnvironments = alembic_env): 
+
+def alembic(cmd: str, env: ValidDatabaseEnvironments = alembic_env):
     sh(
         f"alembic {cmd}",
         check=True,
         env={**os.environ, "alembic_env": validate_database_environment(env)},
     )
+
 
 type TestTypes = Literal["all", "migrations", "seeds"]
 

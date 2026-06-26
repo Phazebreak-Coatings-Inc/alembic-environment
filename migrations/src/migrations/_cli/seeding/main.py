@@ -10,7 +10,7 @@ from migrations.utils import (
     ValidDatabaseEnvironments,
     get_database_setting,
     validate_database_environment,
-    run_steps
+    run_steps,
 )
 
 SEEDS_DIRECTORY = Path(__file__).parent.parent.parent / "seeds"
@@ -55,14 +55,13 @@ seed = seed_registry.seed
 
 
 def execute_seeds(
-    env: ValidDatabaseEnvironments, 
-    dry_run: bool = False,
-    confirm: bool = True
+    env: ValidDatabaseEnvironments, dry_run: bool = False, confirm: bool = True
 ):
     env = validate_database_environment(env)
     errors: list[tuple[str, Exception]] = []
 
     with Session(get_database_setting(env).engine) as s:
+
         def make_step(fn):
             def step():
                 try:
@@ -70,6 +69,7 @@ def execute_seeds(
                         fn(s)
                 except Exception as e:
                     errors.append((fn.__name__, e))
+
             return step
 
         fns = [make_step(fn) for fn in seed_registry.get_seeds(env)]
@@ -94,7 +94,9 @@ def execute_seeds(
             raise SeedingException(f"{len(errors)} seed(s) failed:\n{details}")
         if dry_run:
             s.rollback()
-            print(f"Successfully ran and rolled-back {len(fns)} seeding functions in '{env}' environment.")
+            print(
+                f"Successfully ran and rolled-back {len(fns)} seeding functions in '{env}' environment."
+            )
             return
 
         print(f"Successfully ran {len(fns)} seeding functions in '{env}' environment.")
@@ -110,11 +112,17 @@ def {name}(session: Session) -> None:
     ...
 """
 
-def generate_seed_file(env: ValidDatabaseEnvironments, name: str, dry_run: bool = False):
+
+def generate_seed_file(
+    env: ValidDatabaseEnvironments, name: str, dry_run: bool = False
+):
     n = inflection.underscore(name)
     p = SEEDS_DIRECTORY / f"{n}.py"
     if p.exists():
-        typer.confirm(f"{p.name} already exists, are you sure you want to overwrite it?", abort=True)
+        typer.confirm(
+            f"{p.name} already exists, are you sure you want to overwrite it?",
+            abort=True,
+        )
     else:
         p.touch()
 
@@ -126,4 +134,3 @@ def generate_seed_file(env: ValidDatabaseEnvironments, name: str, dry_run: bool 
     p.write_text(t)
     print(f"Wrote new seed file to {p}: \n\n{t}\n")
     return
-
