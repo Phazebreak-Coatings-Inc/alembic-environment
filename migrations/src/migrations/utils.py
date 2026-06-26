@@ -1,6 +1,13 @@
-from sqlalchemy import create_engine
+import subprocess
+from pathlib import Path
+import time
+from typing import Annotated, Callable, Literal
+
+import typer
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal
+from sqlalchemy import create_engine
 
 DEV_ENV = ".env.dev"
 STAGING_ENV = ".env.staging"
@@ -75,3 +82,63 @@ class AlembicSettings(BaseSettings):
 
 
 alembic_settings = AlembicSettings()
+alembic_env = alembic_settings.env
+
+app = typer.Typer(pretty_exceptions_show_locals=False)
+
+VerboseOption = Annotated[
+    bool, typer.Option("-v", "--verbose", help="Run in verbose mode.")
+]
+
+
+def run_steps(fns: list[Callable] | None = None, label: str | None = None):
+    fns = fns or []
+    with typer.progressbar(
+        fns, label=label, width=min(len(fns), 34), show_percent=True
+    ) as s:
+        for fn in s:
+            fn()
+
+
+EnvArg = Annotated[
+    ValidDatabaseEnvironments,
+    typer.Argument(help="Choose which environment to seed for."),
+]
+DryRun = Annotated[
+    bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
+]
+
+
+def sh(cmd: str, silent=False, check=True, **kwargs):
+    if silent:
+        kwargs.setdefault("stdout", subprocess.DEVNULL)
+        kwargs.setdefault("stderr", subprocess.DEVNULL)
+    try:
+        subprocess.run(cmd, shell=True, check=check, **kwargs)
+    except subprocess.CalledProcessError as e:
+        typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(e.returncode) from None  #
+
+
+type TestTypes = Literal["all", "migrations", "seeds"]
+
+TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests"
+
+
+def _pytest(typ: TestTypes = "all", throw: bool = False):
+    sh("pytest" if typ == "all" else f"pytest test_{typ}.py", check=throw)
+
+
+def _heads() -> list[str]:
+    return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
+
+
+def _wait_for_db(engine, attempts: int = 60, delay: float = 0.5):
+    for _ in range(attempts):
+        try:
+            with engine.connect() as c:
+                c.exec_driver_sql("SELECT 1")
+            return
+        except Exception:
+            time.sleep(delay)
+    raise RuntimeError("database never accepted connections")

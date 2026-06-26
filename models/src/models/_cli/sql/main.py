@@ -1,13 +1,14 @@
+import ast
+import copy
+import subprocess
 from pathlib import Path
 from typing import Literal
+
 import inflection
-from migrations.utils import migration_settings as m
 from migrations._cli.app import migrations_database
-from sqlalchemy import MetaData
+from migrations.utils import migration_settings as m
 from sqlacodegen.generators import SQLModelGenerator
-import ast
-import subprocess
-import copy
+from sqlalchemy import MetaData
 
 MODELS_DIR = Path(__file__).parent.parent.parent
 INIT_FILE = MODELS_DIR / "__init__.py"

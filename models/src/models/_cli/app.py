@@ -1,10 +1,17 @@
-from typer import Typer
-import typer
-from models._cli.sql.main import SQLGenerator, SQL_DIR, MODELS_DIR, INIT_FILE
-from typing import Annotated
 import ast
-from models._cli.sql.main import ruff_format
+from typing import Annotated
+
+import typer
 from migrations._cli.app import migrate
+from typer import Typer
+
+from models._cli.sql.main import (
+    INIT_FILE,
+    MODELS_DIR,
+    SQL_DIR,
+    SQLGenerator,
+    ruff_format,
+)
 
 app = Typer(pretty_exceptions_show_locals=False)
 

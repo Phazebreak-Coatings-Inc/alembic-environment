@@ -1,10 +1,11 @@
-from typer import Typer
-from typing import Annotated
-import copier
-import typer
 import subprocess
 from pathlib import Path
+from typing import Annotated
+
+import copier
 import tomlkit
+import typer
+from typer import Typer
 
 type PyProject = tomlkit.TOMLDocument
 
@@ -56,6 +57,7 @@ def get_pyproject(cwd: Path) -> tomlkit.TOMLDocument:
 def add_workspaces(p: PyProject, members: WorkspaceMembers) -> PyProject:
     def sd(t, name):
         return t.setdefault(name, tomlkit.table())
+
     uv = sd(sd(p, "tool"), "uv")
     ws = sd(uv, "workspace")
     ext = list(ws.get("members", []))
