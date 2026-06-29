@@ -12,6 +12,7 @@ from models._cli.sql.main import (
     SQLGenerator,
     ruff_format,
 )
+from models._cli.sql.reverse import ReverseGenerator
 
 app = Typer(pretty_exceptions_show_locals=False)
 
@@ -34,6 +35,28 @@ def g(
         repair()
         migrate()
         print("Wrote files successfully.")
+
+
+@app.command(
+    name="rg",
+    help="Reverse: document columns alembic picked up via mixins as commented fields in model.py.",
+)
+def reverse_generate(
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "-dr", "--dry-run", help="Show injected fields without writing to disk."
+        ),
+    ] = False,
+):
+    r = ReverseGenerator()
+    print(
+        f"\nFound {r.injected_total} injected column(s) across "
+        f"{len([x for x in r.results if x.columns])} model(s):\n{r.preview()}"
+    )
+    if not dry_run and r.injected_total:
+        r.write_files()
+        print("\nWrote reverse-generated comments successfully.")
 
 
 @app.command(help="Auto hook up imports.")

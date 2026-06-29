@@ -228,3 +228,59 @@ class Users(UsersBase, table=True):
 ```
 
 This way, if you change your tables in SQL, you can still keep all the custom logic for your objects!
+
+## Reverse Generation
+
+The generator above goes one way: SQL → python. Sometimes you go the other way and add a column *in python* — for example with a mixin on your ```model.py``` — rather than in ```./models/sql```. Because your ```model.py``` is part of ```SQLModel.metadata```, **Alembic autogenerate picks that column up** and writes a migration for it, even though nothing in ```./models/sql``` ever mentioned it. That column never shows up in the generated ```base.py``` (which only reflects your SQL), so the file you read gives no hint that the live table is wider than your SQL.
+
+Reverse generation reconciles the two. Say you add a ```TimestampMixin``` to ```users/model.py```:
+
+```python
+from datetime import datetime
+
+from sqlmodel import Field
+
+from .base import UsersBase
+
+
+class TimestampMixin:
+    created_at: datetime = Field(nullable=True)
+
+
+class Users(UsersBase, TimestampMixin, table=True):
+    pass  # add methods here
+```
+
+```created_at``` is now on the ```users``` table as far as Alembic is concerned, but it isn't in ```./models/sql/users.sql``` and so isn't in ```base.py```. Run:
+
+```sh
+uv run python -m models rg
+```
+
+It diffs the live model columns (what Alembic sees) against the SQL-derived ```base.py``` columns and writes any **injected** columns back into ```model.py```, commented out, as documentation:
+
+```python
+from datetime import datetime
+
+from sqlmodel import Field
+
+from .base import UsersBase
+
+
+class TimestampMixin:
+    created_at: datetime = Field(nullable=True)
+
+
+class Users(UsersBase, TimestampMixin, table=True):
+    pass  # add methods here
+
+
+# >>> reverse-generated (alembic) >>>
+# Columns below live on the model -- what Alembic autogenerate / SQLModel.metadata
+# sees -- but are NOT declared in ./models/sql. They're injected in python, e.g. via
+# a mixin. Shown commented-out, as documentation only; the mixin still owns them.
+# created_at: Optional[datetime.datetime] = Field(default=None, sa_column=Column("created_at", DateTime(), nullable=True))  # reverse-generated from mixin
+# <<< reverse-generated (alembic) <<<
+```
+
+The block is just talk — it's commented out, so it changes nothing at runtime (the mixin still owns the column). It only documents, right in the table file, which columns Alembic picked up that didn't come from your SQL. The block is delimited and rewritten on every run, so ```rg``` is idempotent: re-running refreshes it in place instead of stacking, and it's removed automatically once the column is no longer injected (e.g. you moved it into ```./models/sql```). Use ```-dr```/```--dry-run``` to preview without writing.
