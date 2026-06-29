@@ -193,27 +193,36 @@ class SQLGenerator:
 
             (directory / "__init__.py").write_text(ruff_format(model.class_to_init()))
 
+
 DIALECT = "postgres"
 
+
 class SQLParseError(Exception): ...
+
 
 def get_creates(sql: str) -> list[exp.Create]:
     return [s for s in sqlglot.parse(sql) if isinstance(s, exp.Create)]
 
+
 def create_to_columns(create: exp.Create) -> list[exp.ColumnDef]:
     return list(create.find_all(exp.ColumnDef))
+
 
 def create_to_table(create: exp.Create) -> exp.Table:
     return create.this.find(exp.Table)
 
+
 class SQLMergeError(Exception): ...
+
 
 def as_comment(col: exp.ColumnDef) -> exp.ColumnDef:
     setattr(col, "_commented", True)
     return col
 
+
 def is_comment(col: exp.ColumnDef) -> bool:
     return getattr(col, "_commented", False)
+
 
 def merge_columns(
     c1: list[exp.ColumnDef],
@@ -224,9 +233,10 @@ def merge_columns(
     merged = []
     for col in c2:
         if col.name in names:
-            raise SQLMergeError(f"Column '{col.name}' is already defined") 
+            raise SQLMergeError(f"Column '{col.name}' is already defined")
         merged.append(as_comment(col) if comment else col)
-    return merged 
+    return merged
+
 
 def render_create(table: str, cols: list[exp.ColumnDef]) -> str:
     real = [c for c in cols if not is_comment(c)]
@@ -237,11 +247,16 @@ def render_create(table: str, cols: list[exp.ColumnDef]) -> str:
         out += "\n  " + "\n  ".join("-- " + c.sql(dialect=DIALECT) for c in commented)
     return out + "\n)"
 
+
 def get_sql_from_orm(metadata: MetaData):
     ddl = []
-    engine = create_mock_engine("postgresql://", lambda sql, *a, **k: ddl.append(str(sql.compile(dialect=engine.dialect))))
+    engine = create_mock_engine(
+        "postgresql://",
+        lambda sql, *a, **k: ddl.append(str(sql.compile(dialect=engine.dialect))),
+    )
     metadata.create_all(engine, checkfirst=False)
     return ddl
+
 
 class SQLReverseGenerator:
     def __init__(self, metadata: MetaData):
@@ -267,7 +282,8 @@ class SQLReverseGenerator:
         sql_cols = create_to_columns(self.sql_creates[table])
         sql_names = {c.name for c in sql_cols}
         orm_only = [
-            c for c in create_to_columns(self.orm_creates[table])
+            c
+            for c in create_to_columns(self.orm_creates[table])
             if c.name not in sql_names
         ]
         return render_create(table, sql_cols + merge_columns(sql_cols, orm_only))
