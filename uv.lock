@@ -1,10 +1,11 @@
 version = 1
 revision = 3
-requires-python = ">=3.14"
+requires-python = ">=3.14.5"
 
 [manifest]
 members = [
     "alembic-environment",
+    "environments",
     "migrations",
     "models",
 ]
@@ -25,10 +26,12 @@ wheels = [
 
 [[package]]
 name = "alembic-environment"
-version = "0.1.5"
+version = "0.1.6"
 source = { editable = "." }
 dependencies = [
     { name = "copier" },
+    { name = "sqlglot" },
+    { name = "sqlparse" },
     { name = "tomlkit" },
     { name = "typer" },
 ]
@@ -57,6 +60,8 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "copier", specifier = ">=9.15.1" },
+    { name = "sqlglot", specifier = ">=30.12.0" },
+    { name = "sqlparse", specifier = ">=0.5.5" },
     { name = "tomlkit", specifier = ">=0.15.0" },
     { name = "typer", specifier = ">=0.26.6" },
 ]
@@ -66,8 +71,8 @@ dev = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "debugpy", specifier = ">=1.8.21" },
     { name = "inflection", specifier = ">=0.5.1" },
-    { name = "migrations", editable = "migrations" },
-    { name = "models", editable = "models" },
+    { name = "migrations", editable = "database/migrations" },
+    { name = "models", editable = "database/models" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "pytest", specifier = ">=9.0.3" },
@@ -176,6 +181,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/9f/67/d5611975faaa5e4a9
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/bc/8b8ec5a4bfc5b9cf3ce27a118339e994f88410be5677c96493e0ea28e76d/dunamai-1.26.1-py3-none-any.whl", hash = "sha256:2727d939c5b4257cb01ea404372803b477f5176e5a347c43beaf89cd5072e853", size = 27332, upload-time = "2026-04-04T14:07:10.079Z" },
 ]
+
+[[package]]
+name = "environments"
+version = "0.1.0"
+source = { virtual = "database/environments" }
 
 [[package]]
 name = "funcy"
@@ -356,7 +366,7 @@ wheels = [
 [[package]]
 name = "migrations"
 version = "0.1.0"
-source = { editable = "migrations" }
+source = { editable = "database/migrations" }
 dependencies = [
     { name = "alembic" },
     { name = "models" },
@@ -370,7 +380,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
-    { name = "models", editable = "models" },
+    { name = "models", editable = "database/models" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-alembic", specifier = ">=0.12.1" },
@@ -381,7 +391,7 @@ requires-dist = [
 [[package]]
 name = "models"
 version = "0.1.0"
-source = { editable = "models" }
+source = { editable = "database/models" }
 dependencies = [
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
@@ -764,6 +774,15 @@ wheels = [
 ]
 
 [[package]]
+name = "sqlglot"
+version = "30.12.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/ed/a6c45aec29353b6392ea34548c40af3ac6ffd6bc5572cf23b2ce250876fc/sqlglot-30.12.0.tar.gz", hash = "sha256:6b8369704662d4f654bc934cea4dd31c916c2a571b389210cb9e951a275e5fd9", size = 5905110, upload-time = "2026-06-26T14:09:40.408Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/db/9e/82a390ecc85f066ff80affa01d195f744e3de60ad4d695b8de31c9a66da3/sqlglot-30.12.0-py3-none-any.whl", hash = "sha256:86cccc610073c645c03e72b55b60ae0518aa3253a7fc3bd56551370d003c6554", size = 707583, upload-time = "2026-06-26T14:09:38.525Z" },
+]
+
+[[package]]
 name = "sqlmodel"
 version = "0.0.38"
 source = { registry = "https://pypi.org/simple" }
@@ -775,6 +794,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/64/0d/26ec1329960ea9430131fe63f63a95ea4cb8971d49c891ff7e1f3255421c/sqlmodel-0.0.38.tar.gz", hash = "sha256:d583ec237b14103809f74e8630032bc40ab68cd6b754a610f0813c56911a547b", size = 86710, upload-time = "2026-04-02T21:03:55.571Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/72/c7/10c60af0607ab6fa136264f7f39d205932218516226d38585324ffda705d/sqlmodel-0.0.38-py3-none-any.whl", hash = "sha256:84e3fa990a77395461ded72a6c73173438ce8449d5c1c4d97fbff1b1df692649", size = 27294, upload-time = "2026-04-02T21:03:56.406Z" },
+]
+
+[[package]]
+name = "sqlparse"
+version = "0.5.5"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/90/76/437d71068094df0726366574cf3432a4ed754217b436eb7429415cf2d480/sqlparse-0.5.5.tar.gz", hash = "sha256:e20d4a9b0b8585fdf63b10d30066c7c94c5d7a7ec47c889a2d83a3caa93ff28e", size = 120815, upload-time = "2025-12-19T07:17:45.073Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/49/4b/359f28a903c13438ef59ebeee215fb25da53066db67b305c125f1c6d2a25/sqlparse-0.5.5-py3-none-any.whl", hash = "sha256:12a08b3bf3eec877c519589833aed092e2444e68240a3577e8e26148acc7b1ba", size = 46138, upload-time = "2025-12-19T07:17:46.573Z" },
 ]
 
 [[package]]

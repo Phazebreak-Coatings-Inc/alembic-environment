@@ -24,4 +24,4 @@ jobs:
       - name: Install dependencies
         run: uv sync
       - name: Run migration test suite
-        run: uv run python -m migrations test --throw
+        run: uv run python -m migrations cicd
