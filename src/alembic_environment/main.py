@@ -15,7 +15,8 @@ COPIER_REPO = "gh:Phazebreak-Coatings-Inc/alembic-environment"
 
 ANSWERS_FILE = ".alembic-environment-answers.yml"
 
-WORKSPACES = ["models", "migrations"]
+WORKSPACE_MEMBERS = ["database/models", "database/migrations", "database/environments"]
+WORKSPACE_NAMES = ["models", "migrations"]
 
 PACKAGES = [
     "alembic>=1.18.4",
