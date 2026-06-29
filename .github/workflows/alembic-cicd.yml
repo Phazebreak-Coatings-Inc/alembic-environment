@@ -1,4 +1,4 @@
-name: alembic-migrations
+name: alembic-cicd
 on:
   push:
     branches:
@@ -23,5 +23,5 @@ jobs:
         run: uv python install
       - name: Install dependencies
         run: uv sync
-      - name: Run migration test suite
+      - name: Run alembic cicd
         run: uv run python -m migrations cicd
