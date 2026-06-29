@@ -47,8 +47,6 @@ dev = [
     "tomlkit>=0.15.0",
     "sqlacodegen>=4.0.3",
     "inflection>=0.5.1",
-    "models",
-    "migrations"
 ]
 
 docs = [
