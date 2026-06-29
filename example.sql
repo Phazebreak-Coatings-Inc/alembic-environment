@@ -1,3 +1,0 @@
-CREATE TABLE foobar (
-	user_id INT PRIMARY KEY AUTO_INCREMENT
-);
