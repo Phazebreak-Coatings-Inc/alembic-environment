@@ -157,12 +157,7 @@ def init():
 @app.command(
     help="Run a autonomous CICD workflow that checks for drift, tests, and commits to a separate branch with a pull-request."
 )
-def cicd(
-    exclude: Annotated[
-        list[str],
-        typer.Option("--exclude", "-e", help="Exclude from being run on certain envs"),
-    ],
-):
+def cicd():
     with migrations_database():
         try:
             alembic_check()
