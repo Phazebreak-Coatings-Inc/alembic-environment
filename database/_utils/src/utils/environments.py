@@ -1,4 +1,5 @@
 import os
+from contextlib import contextmanager
 from pathlib import Path
 import time
 from typing import Annotated, Callable, Literal, cast
@@ -40,7 +41,7 @@ class BaseDatabaseSettings(BaseSettings):
     @property
     def engine(self):
         return create_engine(self.database_url)
-
+   
     @abstractmethod
     def up(self): ...
 
@@ -50,6 +51,23 @@ class BaseDatabaseSettings(BaseSettings):
     @abstractmethod
     def destroy(self): ...
 
+    @contextmanager
+    def temp(self):
+        try:
+            self.up()
+            yield None
+        finally:
+            self.down()
+
+def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
+    for _ in range(attempts):
+        try:
+            with engine.connect() as c:
+                c.exec_driver_sql("SELECT 1")
+            return
+        except Exception:
+            time.sleep(delay)
+    raise RuntimeError("Couldn't start database")
 
 class MigrationSettings(BaseDatabaseSettings):
     database_host = "localhost" 
@@ -58,13 +76,35 @@ class MigrationSettings(BaseDatabaseSettings):
     database_password = "migrations_password"
     database_name = "migrations"
 
-    def up(self): ...
+    def up(self):
+        from .typer_utils import run_steps, sh
+        m = self
+        run_steps(
+            fns=[
+                lambda: sh("docker pull postgres", check=True),
+                lambda: sh(
+                    f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
+                    check=True,
+                ),
+                lambda: wait_for_database(engine=m.engine),
+            ],
+            label="Starting Migrations Database",
+        )   
+    
+    def down(self): 
+        from .typer_utils import run_steps, sh
+        m = self
+        run_steps(
+            fns=[lambda: sh(f"docker rm -f {m.database_name}", check=True, silent=True)],
+            label="Shutting Down Migrations Database",
+        )
 
-    def down(self): ...
+    def destroy(self): 
+        return self.down()
 
-    def destroy(self): ...
-
+   
 migration_settings = MigrationSettings()
+migration_database = migration_settings.temp
 
 class DevDatabaseSettings(BaseDatabaseSettings):
     model_config = SettingsConfigDict(env_file=DEV_ENV)
@@ -114,17 +154,6 @@ class AlembicSettings(BaseSettings):
 alembic_settings = AlembicSettings()
 alembic_env: DatabaseEnvironment = cast(DatabaseEnvironment, alembic_settings.env)
 
-app = typer.Typer(pretty_exceptions_show_locals=False)
-
-def _heads() -> list[str]:
+def alembic_heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
 
-def _wait_for_db(engine, attempts: int = 60, delay: float = 0.5):
-    for _ in range(attempts):
-        try:
-            with engine.connect() as c:
-                c.exec_driver_sql("SELECT 1")
-            return
-        except Exception:
-            time.sleep(delay)
-    raise RuntimeError("Couldn't start database")

@@ -10,7 +10,6 @@ VerboseOption = Annotated[
     bool, typer.Option("-v", "--verbose", help="Run in verbose mode.")
 ]
 
-
 def run_steps(fns: list[Callable] | None = None, label: str | None = None):
     fns = fns or []
     with typer.progressbar(
@@ -26,7 +25,6 @@ EnvArg = Annotated[
 DryRun = Annotated[
     bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
 ]
-
 
 def sh(cmd: str, silent=False, check=True, **kwargs):
     if silent:
@@ -60,4 +58,12 @@ TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests"
 @validate_call
 def alembic_test(typ: TestType = "all", throw: bool = False):
     sh("pytest" if typ == "all" else f"pytest test_{typ}.py", check=throw)
+
+def alembic_check():
+    sh("alembic upgrade head")
+    try:
+        sh("alembic check", check=True)
+    except subprocess.CalledProcessError as e:
+        raise typer.Exit(e.returncode) from None
+
 
