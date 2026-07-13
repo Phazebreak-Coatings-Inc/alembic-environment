@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
+    "singleton-decorator>=1.0.0",
     "sqlglot>=30.12.0",
     "sqlparse>=0.5.5",
     "tomlkit>=0.15.0",

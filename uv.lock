@@ -30,6 +30,7 @@ version = "0.1.6"
 source = { editable = "." }
 dependencies = [
     { name = "copier" },
+    { name = "singleton-decorator" },
     { name = "sqlglot" },
     { name = "sqlparse" },
     { name = "tomlkit" },
@@ -60,6 +61,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "copier", specifier = ">=9.15.1" },
+    { name = "singleton-decorator", specifier = ">=1.0.0" },
     { name = "sqlglot", specifier = ">=30.12.0" },
     { name = "sqlparse", specifier = ">=0.5.5" },
     { name = "tomlkit", specifier = ">=0.15.0" },
@@ -732,6 +734,12 @@ sdist = { url = "https://files.pythonhosted.org/packages/58/15/8b3609fd3830ef7b2
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e0/f9/0595336914c5619e5f28a1fb793285925a8cd4b432c9da0a987836c7f822/shellingham-1.5.4-py2.py3-none-any.whl", hash = "sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686", size = 9755, upload-time = "2023-10-24T04:13:38.866Z" },
 ]
+
+[[package]]
+name = "singleton-decorator"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/33/98/a8b5c919bee1152a9a1afd82014431f8db5882699754de50d1b3aba4d136/singleton-decorator-1.0.0.tar.gz", hash = "sha256:1a90ad8a8a738be591c9c167fdd677c5d4a43d1bc6b1c128227be1c5e03bee07", size = 2791, upload-time = "2017-08-10T19:52:45.903Z" }
 
 [[package]]
 name = "sqlacodegen"
