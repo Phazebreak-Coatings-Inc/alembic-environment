@@ -7,15 +7,11 @@ from pydantic import validate_call
 import inflection
 from sqlmodel import Session
 
-from ...utils import (
-    DatabaseEnvironment,
-    get_database_setting,
-    run_steps,
-    DIR_SEEDS
-)
+from ...utils import DatabaseEnvironment, get_database_setting, run_steps, DIR_SEEDS
 
 SeedFunction = Callable[[Session], None]
 SeedRegistry = dict[DatabaseEnvironment, list[SeedFunction]]
+
 
 class SeedingException(Exception): ...
 
@@ -48,8 +44,10 @@ class Seed:
     def get_seeds(self, env: DatabaseEnvironment) -> list[SeedFunction]:
         return self.__seeds__[env]
 
+
 seed_registry = Seed()
 seed = seed_registry.seed
+
 
 @validate_call
 def execute_seeds(
@@ -108,10 +106,9 @@ def {name}(session: Session) -> None:
     ...
 """
 
+
 @validate_call
-def generate_seed_file(
-    env: DatabaseEnvironment, name: str, dry_run: bool = False
-):
+def generate_seed_file(env: DatabaseEnvironment, name: str, dry_run: bool = False):
     n = inflection.underscore(name)
     p = DIR_SEEDS / f"{n}.py"
     if p.exists():

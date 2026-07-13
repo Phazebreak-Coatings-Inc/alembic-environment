@@ -5,15 +5,11 @@ import typer
 from migrations._cli.app import migrate
 from typer import Typer
 
-from ...utils import (
-    PKG_MODELS,
-    INIT_MODELS,
-    DIR_SQL,
-    ruff_format
-)
+from ...utils import PKG_MODELS, INIT_MODELS, DIR_SQL, ruff_format
 from .sql import SQLGenerator
 
 app = Typer(pretty_exceptions_show_locals=False)
+
 
 @app.command(help=f"Create models, validators, and typeddicts from {DIR_SQL}")
 def g(

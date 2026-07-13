@@ -48,7 +48,7 @@ class BaseDatabaseSettings(BaseSettings):
     @property
     def engine(self):
         return create_engine(self.database_url)
-   
+
     @abstractmethod
     def up(self): ...
 
@@ -66,6 +66,7 @@ class BaseDatabaseSettings(BaseSettings):
         finally:
             self.down()
 
+
 def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
     for _ in range(attempts):
         try:
@@ -76,6 +77,7 @@ def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
             time.sleep(delay)
     raise RuntimeError("Couldn't start database")
 
+
 class MigrationSettings(BaseDatabaseSettings):
     database_host = "localhost"
     database_port = 5431
@@ -85,6 +87,7 @@ class MigrationSettings(BaseDatabaseSettings):
 
     def up(self):
         from .typer_utils import run_steps, sh
+
         m = self
         run_steps(
             fns=[
@@ -96,18 +99,22 @@ class MigrationSettings(BaseDatabaseSettings):
                 lambda: wait_for_database(engine=m.engine),
             ],
             label="Starting Migrations Database",
-        )   
-    
-    def down(self): 
+        )
+
+    def down(self):
         from .typer_utils import run_steps, sh
+
         m = self
         run_steps(
-            fns=[lambda: sh(f"docker rm -f {m.database_name}", check=True, silent=True)],
+            fns=[
+                lambda: sh(f"docker rm -f {m.database_name}", check=True, silent=True)
+            ],
             label="Shutting Down Migrations Database",
         )
 
-    def destroy(self): 
+    def destroy(self):
         return self.down()
+
 
 migration_settings = MigrationSettings()
 migration_database = migration_settings.temp
@@ -166,6 +173,7 @@ class AlembicSettings(BaseSettings):
 
 alembic_settings = AlembicSettings()
 alembic_env: DatabaseEnvironment = cast(DatabaseEnvironment, alembic_settings.env)
+
 
 def alembic_heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())

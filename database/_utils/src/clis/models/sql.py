@@ -16,9 +16,11 @@ from ...utils import (
     PKG_MODELS,
     migration_settings as m,
     migration_database as mdb,
-    ruff_format
+    ruff_format,
 )
+
 FileKind = Literal["base", "typeddict", "validator", "model"]
+
 
 class Model:
     def __init__(self, class_def: ast.ClassDef):

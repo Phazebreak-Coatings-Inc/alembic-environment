@@ -22,7 +22,7 @@ from ...utils import (
     alembic,
     migration_settings as ms,
     migration_database as mdb,
-    alembic_check
+    alembic_check,
 )
 from migrations.utils import (
     migration_settings as m,
@@ -33,16 +33,19 @@ from .seeding import execute_seeds, generate_seed_file
 
 app = typer.Typer()
 
+
 @app.command(
     help="Start up the migrations database for autogenerating alembic revisions."
 )
 @validate_call
 def up(v: VerboseOption = False):
-    return ms.up() 
+    return ms.up()
+
 
 @app.command(help="Shut down the migrations database.")
 def down():
     return ms.down()
+
 
 @app.command(help="Seed the database with anything decorated with 'migrations.seed'.")
 def seed(
@@ -83,6 +86,7 @@ def alembic_migrate(message: str = ""):
         check=True,
     )
 
+
 @app.command(
     help="Start the migrations database to autogenerate a revision, then clean up."
 )
@@ -100,10 +104,12 @@ def apply(
     typer.confirm(f"Upgrade {env} to {target}?", abort=True)
     alembic("upgrade target", env)
 
+
 @app.command(help="Check if the database needs to be migrated.")
 def check():
     with mdb():
         alembic_check()
+
 
 @app.command(help="Generate the first (baseline) revision, even if empty.")
 def init():
@@ -140,7 +146,7 @@ def cicd():
                 check=True,
             )
         try:
-            #TODO: this needs to be replaced from main to whatever the current branch is and auto merged or else tons of spam, etc etc ...
+            # TODO: this needs to be replaced from main to whatever the current branch is and auto merged or else tons of spam, etc etc ...
             raise NotImplementedError("Current solution is bad")
             b = f"cicd/alembic-migration-{uuid.uuid4()}"
             sh(f"git switch -c {b}")
@@ -150,9 +156,8 @@ def cicd():
             sh(f"gh pr create --fill --base main --head {b}")
 
         except Exception as e:
-            raise Exception(
-                f"Error creating merging new migrations: {e}"
-            )
+            raise Exception(f"Error creating merging new migrations: {e}")
+
 
 @app.command(
     help="Apply migrations to staging and prod. Only use this once the migrations are actually on main, else you could have broken versioning."
