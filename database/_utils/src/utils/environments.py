@@ -17,12 +17,19 @@ STAGING_ENV = ".env.staging"
 PROD_ENV = ".env.prod"
 ENVS = ["dev", "staging", "prod"]
 
+
 def is_valid_database_env(env: str) -> "DatabaseEnvironment":
     if env not in ENVS:
-        raise ValueError(f"'{env}' is not a valid database environment, choose one of {ENVS}")
-    return env #type: ignore
+        raise ValueError(
+            f"'{env}' is not a valid database environment, choose one of {ENVS}"
+        )
+    return env  # type: ignore
 
-DatabaseEnvironment = Annotated[Literal["dev", "staging", "prod"], BeforeValidator(is_valid_database_env)]
+
+DatabaseEnvironment = Annotated[
+    Literal["dev", "staging", "prod"], BeforeValidator(is_valid_database_env)
+]
+
 
 class BaseDatabaseSettings(BaseSettings):
     database_host: str | None = "localhost"
@@ -70,7 +77,7 @@ def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
     raise RuntimeError("Couldn't start database")
 
 class MigrationSettings(BaseDatabaseSettings):
-    database_host = "localhost" 
+    database_host = "localhost"
     database_port = 5431
     database_username = "migrations"
     database_password = "migrations_password"
@@ -102,18 +109,19 @@ class MigrationSettings(BaseDatabaseSettings):
     def destroy(self): 
         return self.down()
 
-   
 migration_settings = MigrationSettings()
 migration_database = migration_settings.temp
 
+
 class DevDatabaseSettings(BaseDatabaseSettings):
     model_config = SettingsConfigDict(env_file=DEV_ENV)
-    
+
     def up(self): ...
 
     def down(self): ...
 
     def destroy(self): ...
+
 
 class StagingDatabaseSettings(BaseDatabaseSettings):
     model_config = SettingsConfigDict(env_file=STAGING_ENV)
@@ -124,6 +132,7 @@ class StagingDatabaseSettings(BaseDatabaseSettings):
 
     def destroy(self): ...
 
+
 class ProdDatabaseSettings(BaseDatabaseSettings):
     model_config = SettingsConfigDict(env_file=PROD_ENV)
 
@@ -133,7 +142,9 @@ class ProdDatabaseSettings(BaseDatabaseSettings):
 
     def destroy(self): ...
 
+
 DatabaseSetting = DevDatabaseSettings | StagingDatabaseSettings | ProdDatabaseSettings
+
 
 @validate_call
 def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
@@ -147,13 +158,14 @@ def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
             s = ProdDatabaseSettings()
     return s
 
+
 class AlembicSettings(BaseSettings):
     env = "dev"
     auto_seed: bool = True
+
 
 alembic_settings = AlembicSettings()
 alembic_env: DatabaseEnvironment = cast(DatabaseEnvironment, alembic_settings.env)
 
 def alembic_heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
-
