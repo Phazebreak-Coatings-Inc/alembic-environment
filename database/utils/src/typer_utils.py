@@ -19,6 +19,7 @@ def run_steps(fns: list[Callable] | None = None, label: str | None = None):
         for fn in s:
             fn()
 
+
 EnvArg = Annotated[
     DatabaseEnvironment,
     typer.Argument(help="Choose which environment to seed for."),
@@ -38,6 +39,7 @@ def sh(cmd: str, silent=False, check=True, **kwargs):
         typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None  #
 
+
 @validate_call
 def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
     sh(
@@ -46,18 +48,21 @@ def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
         env={**os.environ, "alembic_env": env},
     )
 
+
 TEST_TYPES = []
+
 
 def validate_test_type(t: str) -> "TestType":
     if t not in TEST_TYPES:
         raise ValueError()
     return t
 
+
 TestType = Annotated[str, BeforeValidator(validate_test_type)]
 
 TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests"
 
+
 @validate_call
 def alembic_test(typ: TestType = "all", throw: bool = False):
     sh("pytest" if typ == "all" else f"pytest test_{typ}.py", check=throw)
-
