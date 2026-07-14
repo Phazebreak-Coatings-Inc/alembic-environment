@@ -137,9 +137,15 @@ def repair(
     p = Path(cwd).resolve()
     for name, member in WORKSPACE.items():
         if not (p / member / "pyproject.toml").exists():
-            typer.secho(f"member {member!r} ({name}) has no pyproject.toml", fg=typer.colors.RED, err=True)
+            typer.secho(
+                f"member {member!r} ({name}) has no pyproject.toml",
+                fg=typer.colors.RED,
+                err=True,
+            )
             raise typer.Exit(1)
     write_pyproject(p, add_workspaces(get_pyproject(p), WORKSPACE))
     sh(f"uv add --workspace {' '.join(WORKSPACE)}", cwd=p)
-    sh(f"uv add --dev {' '.join(PACKAGES)}", cwd=p)   # dev, if you want parity with your own repo
+    sh(
+        f"uv add --dev {' '.join(PACKAGES)}", cwd=p
+    )  # dev, if you want parity with your own repo
     sh("uv sync", cwd=p)
