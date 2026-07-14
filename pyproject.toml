@@ -6,10 +6,6 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
-    "singleton-decorator>=1.0.0",
-    "sqlglot>=30.12.0",
-    "sqlparse>=0.5.5",
-    "tomlkit>=0.15.0",
     "typer>=0.26.6",
 ]
 
@@ -29,13 +25,14 @@ build-backend = "uv_build"
 members = ["database/models", "database/migrations", "database/environments", "database/util"]
 
 [tool.uv.sources]
+util = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
 environments = { workspace = true }
-util = { workspace = true }
 
 [dependency-groups]
 dev = [
+    "skylos>=4.29.0",
     "debugpy>=1.8.21",
     "alembic>=1.18.4",
     "sqlalchemy>=2.0.50",
@@ -52,6 +49,9 @@ dev = [
     "tomlkit>=0.15.0",
     "sqlacodegen>=4.0.3",
     "inflection>=0.5.1",
+    "copier>=9.15.1",
+    "typer>=0.26.6",
+    "sqlglot>=30.12.0",
 ]
 
 docs = [
