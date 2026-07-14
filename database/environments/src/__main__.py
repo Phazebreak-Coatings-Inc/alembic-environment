@@ -1,3 +1,3 @@
-from _utils import environments_cli
+from util import environments_cli
 
 environments_cli()

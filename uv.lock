@@ -8,7 +8,7 @@ members = [
     "environments",
     "migrations",
     "models",
-    "utils",
+    "util",
 ]
 
 [[package]]
@@ -42,6 +42,7 @@ dependencies = [
 dev = [
     { name = "alembic" },
     { name = "debugpy" },
+    { name = "environments" },
     { name = "inflection" },
     { name = "migrations" },
     { name = "models" },
@@ -54,6 +55,7 @@ dev = [
     { name = "sqlalchemy" },
     { name = "sqlmodel" },
     { name = "tomlkit" },
+    { name = "util" },
 ]
 docs = [
     { name = "zensical" },
@@ -73,6 +75,7 @@ requires-dist = [
 dev = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "debugpy", specifier = ">=1.8.21" },
+    { name = "environments", editable = "database/environments" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "migrations", editable = "database/migrations" },
     { name = "models", editable = "database/models" },
@@ -85,6 +88,7 @@ dev = [
     { name = "sqlalchemy", specifier = ">=2.0.50" },
     { name = "sqlmodel", specifier = ">=0.0.38" },
     { name = "tomlkit", specifier = ">=0.15.0" },
+    { name = "util", editable = "database/util" },
 ]
 docs = [{ name = "zensical", specifier = ">=0.0.43" }]
 
@@ -188,7 +192,7 @@ wheels = [
 [[package]]
 name = "environments"
 version = "0.1.0"
-source = { virtual = "database/environments" }
+source = { editable = "database/environments" }
 
 [[package]]
 name = "funcy"
@@ -908,9 +912,9 @@ wheels = [
 ]
 
 [[package]]
-name = "utils"
+name = "util"
 version = "0.1.0"
-source = { editable = "database/_utils" }
+source = { editable = "database/util" }
 
 [[package]]
 name = "wcwidth"

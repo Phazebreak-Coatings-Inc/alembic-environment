@@ -1,3 +1,3 @@
-from models._cli import app
+from util import models_cli
 
-app()
+models_cli()

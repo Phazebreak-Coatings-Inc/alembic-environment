@@ -1,68 +1,43 @@
-import os
 import subprocess
 import uuid
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated
+from pydantic import validate_call
 
 import typer
 
-from migrations._cli.seeding.main import SEEDS_DIRECTORY
-from migrations.utils import (
-    ENVS,
-    app,
+from ...utils import (
     DryRun,
     EnvArg,
     VerboseOption,
-    _heads,
+    alembic_heads,
     alembic_test,
-    _wait_for_db,
     alembic_env,
-    run_steps,
     sh,
-    validate_database_environment,
     alembic,
-)
-from migrations.utils import (
-    migration_settings as m,
+    migration_settings as ms,
+    migration_database as mdb,
+    alembic_check,
+    DIR_SEEDS,
 )
 
 from .seeding import execute_seeds, generate_seed_file
 
 
+app = typer.Typer()
+
+
 @app.command(
     help="Start up the migrations database for autogenerating alembic revisions."
 )
+@validate_call
 def up(v: VerboseOption = False):
-    run_steps(
-        fns=[
-            lambda: sh("docker pull postgres", check=True, silent=not v),
-            lambda: sh(
-                f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
-                check=True,
-                silent=not v,
-            ),
-            lambda: _wait_for_db(engine=m.engine),
-        ],
-        label="Starting Migrations Database",
-    )
+    return ms.up()
 
 
 @app.command(help="Shut down the migrations database.")
 def down():
-    run_steps(
-        fns=[lambda: sh(f"docker rm -f {m.database_name}", check=True, silent=True)],
-        label="Shutting Down Migrations Database",
-    )
-
-
-@contextmanager
-def migrations_database():
-    try:
-        up()
-        yield None
-    finally:
-        down()
+    return ms.down()
 
 
 @app.command(help="Seed the database with anything decorated with 'migrations.seed'.")
@@ -73,7 +48,7 @@ def seed(
         typer.Option(
             "--generate",
             "-g",
-            help=f"Generate a seed file with '--g {{ name }}' It will arrive in ...{Path(*SEEDS_DIRECTORY.parts[-4:])}. The environment variable is for specifying in what environment the seed should run.",
+            help=f"Generate a seed file with '--g {{ name }}' It will arrive in ...{Path(*DIR_SEEDS.parts[-4:])}. The environment variable is for specifying in what environment the seed should run.",
         ),
     ] = None,
     d: DryRun = False,
@@ -91,12 +66,12 @@ def test(
     ] = False,
     seed: Annotated[bool, typer.Option("-s", "--seed", help="Test seed runs")] = False,
 ):
-    with migrations_database():
+    with mdb():
         alembic_test(typ="migrations" if not seed else "seeds", throw=throw)
 
 
 def alembic_migrate(message: str = ""):
-    if len(_heads()) > 1:
+    if len(alembic_heads()) > 1:
         sh('alembic merge -m "merge heads" heads')
     sh("alembic upgrade head", check=True)
     sh(
@@ -109,7 +84,7 @@ def alembic_migrate(message: str = ""):
     help="Start the migrations database to autogenerate a revision, then clean up."
 )
 def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
-    with migrations_database():
+    with mdb():
         alembic_migrate(message)
         alembic_test(throw=True)
 
@@ -123,30 +98,22 @@ def apply(
     alembic("upgrade target", env)
 
 
-def alembic_check():
-    sh("alembic upgrade head")
-    try:
-        sh("alembic check", check=True)
-    except subprocess.CalledProcessError as e:
-        raise typer.Exit(e.returncode) from None
-
-
 @app.command(help="Check if the database needs to be migrated.")
 def check():
-    with migrations_database():
+    with mdb():
         alembic_check()
 
 
 @app.command(help="Generate the first (baseline) revision, even if empty.")
 def init():
-    if _heads():
+    if alembic_heads():
         typer.secho(
             "Revisions already exist, use 'migrate' instead.",
             fg=typer.colors.RED,
             err=True,
         )
         raise typer.Exit(1)
-    with migrations_database():
+    with mdb():
         sh(
             'alembic -x initial=true revision --autogenerate -m "initial"',
             check=True,
@@ -158,20 +125,22 @@ def init():
     help="Run a autonomous CICD workflow that checks for drift, tests, and commits to a separate branch with a pull-request."
 )
 def cicd():
-    with migrations_database():
+    with mdb():
         try:
             alembic_check()
             alembic_test(throw=False)
             return
-        except subprocess.CalledProcessError as e:
-            if len(_heads()) > 1:
+        except subprocess.CalledProcessError:
+            if len(alembic_heads()) > 1:
                 sh('alembic merge -m "merge heads" heads')
             sh("alembic upgrade head", check=True)
             sh(
-                f"alembic revision --autogenerate -m auto",
+                "alembic revision --autogenerate -m auto",
                 check=True,
             )
         try:
+            # TODO: this needs to be replaced from main to whatever the current branch is and auto merged or else tons of spam, etc etc ...
+            raise NotImplementedError("Current solution is bad")
             b = f"cicd/alembic-migration-{uuid.uuid4()}"
             sh(f"git switch -c {b}")
             sh("uvx ruff format .")
@@ -180,9 +149,7 @@ def cicd():
             sh(f"gh pr create --fill --base main --head {b}")
 
         except Exception as e:
-            raise Exception(
-                f"Error creating a separate branch and PR with new migrations: {e}"
-            )
+            raise Exception(f"Error creating merging new migrations: {e}")
 
 
 @app.command(

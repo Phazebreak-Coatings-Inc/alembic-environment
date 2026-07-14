@@ -1,3 +1,3 @@
-from . import app
+from util import migrations_cli
 
-app()
+migrations_cli()

@@ -26,16 +26,13 @@ requires = ["uv_build>=0.11.18,<0.12"]
 build-backend = "uv_build"
 
 [tool.uv.workspace]
-members = [
-    "database/models",
-    "database/migrations",
-    "database/environments",
-    "database/utils",
-]
+members = ["database/models", "database/migrations", "database/environments", "database/util"]
 
 [tool.uv.sources]
 models = { workspace = true }
 migrations = { workspace = true }
+environments = { workspace = true }
+util = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -45,6 +42,8 @@ dev = [
     "sqlmodel>=0.0.38",
     "models",
     "migrations",
+    "environments",
+    "util",
     "pytest-alembic>=0.12.1",
     "pytest>=9.0.3",
     "pydantic-settings>=2.14.1",

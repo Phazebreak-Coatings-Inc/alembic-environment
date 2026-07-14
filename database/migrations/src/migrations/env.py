@@ -4,10 +4,9 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from migrations.utils import (
+from util.utils.environments import (
     get_database_setting,
     migration_settings,
-    validate_database_environment,
 )
 
 config = context.config
@@ -17,12 +16,19 @@ if config.config_file_name is not None:
 
 from migrations import APP_METADATA
 
+try:
+    import models
+
+    print(f"Imported '{models.__name__}' successfully.")
+except Exception as e:
+    raise ImportError(f"We couldn't import your models: {e}")
+
 target_metadata = APP_METADATA
 
 
 def _resolve_url() -> str:
     if env := os.environ.get("ALEMBIC_ENV"):
-        return get_database_setting(validate_database_environment(env)).database_url
+        return get_database_setting(env).database_url  # type: ignore
     return migration_settings.database_url
 
 

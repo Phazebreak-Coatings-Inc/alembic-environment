@@ -1,10 +1,11 @@
 import typer
 import os
-from typing import Annotated, Callable, Literal
+from typing import Annotated, Callable
 import subprocess
 from pathlib import Path
 from .environments import DatabaseEnvironment, alembic_env
 from pydantic import validate_call, BeforeValidator
+from .paths import TESTS_MIGRATIONS
 
 VerboseOption = Annotated[
     bool, typer.Option("-v", "--verbose", help="Run in verbose mode.")
@@ -49,7 +50,7 @@ def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
     )
 
 
-TEST_TYPES = []
+TEST_TYPES = ["all", "migrations", "seeds"]
 
 
 def validate_test_type(t: str) -> "TestType":
@@ -65,7 +66,10 @@ TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests"
 
 @validate_call
 def alembic_test(typ: TestType = "all", throw: bool = False):
-    sh("pytest" if typ == "all" else f"pytest test_{typ}.py", check=throw)
+    sh(
+        "pytest" if typ == "all" else f"pytest {TESTS_MIGRATIONS}/test_{typ}.py",
+        check=throw,
+    )
 
 
 def alembic_check():

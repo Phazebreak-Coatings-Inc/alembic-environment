@@ -1,5 +1,5 @@
 import pytest
-from migrations._cli.seeding import seed_registry
+from util.clis.migrations.seeding import seed_registry
 from sqlmodel import Session
 
 

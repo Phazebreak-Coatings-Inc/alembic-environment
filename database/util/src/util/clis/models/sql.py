@@ -1,33 +1,22 @@
 import ast
 import copy
-import subprocess
 from pathlib import Path
 from typing import Literal
 
 import inflection
-from migrations._cli.app import migrations_database
-from migrations.utils import migration_settings as m
 from sqlacodegen.generators import SQLModelGenerator
 from sqlalchemy import MetaData
 from sqlglot import exp
 import sqlglot
 from sqlalchemy import create_mock_engine
 
-MODELS_DIR = Path(__file__).parent.parent.parent
-INIT_FILE = MODELS_DIR / "__init__.py"
-if not INIT_FILE.exists():
-    raise FileNotFoundError(f"No __init__.py found at {INIT_FILE}")
-SQL_DIR = Path(__file__).parent.parent.parent.parent.parent / "sql"
-if not SQL_DIR.exists():
-    raise FileNotFoundError(f"Missing '/sql' folder at {SQL_DIR}")
-
-
-def ruff_format(code: str) -> str:
-    p = subprocess.run(
-        "uvx ruff format -", shell=True, input=code, capture_output=True, text=True
-    )
-    return p.stdout if p.returncode == 0 else code
-
+from ...utils import (
+    DIR_SQL,
+    PKG_MODELS,
+    migration_settings as m,
+    migration_database as mdb,
+    ruff_format,
+)
 
 FileKind = Literal["base", "typeddict", "validator", "model"]
 
@@ -131,14 +120,14 @@ class Model:
         return imports + "\n" + exports
 
     def get_path(self, file: FileKind):
-        return MODELS_DIR / inflection.underscore(self.name) / f"{file}.py"
+        return PKG_MODELS / inflection.underscore(self.name) / f"{file}.py"
 
 
 class SQLGenerator:
     def __init__(self, dry_run: bool = False):
         g = SQLModelGenerator
         e = m.engine
-        with migrations_database():
+        with mdb():
             with e.begin() as c:
                 for f in self.files:
                     print(f"Applying {f.name}")
@@ -150,7 +139,7 @@ class SQLGenerator:
 
     @property
     def files(self) -> list[Path]:
-        return list(SQL_DIR.glob("*.sql"))
+        return list(DIR_SQL.glob("*.sql"))
 
     @property
     def tree(self) -> ast.Module:
@@ -273,7 +262,7 @@ class SQLReverseGenerator:
     @property
     def sql_creates(self) -> dict[str, exp.Create]:
         creates = {}
-        for f in SQL_DIR.glob("*.sql"):
+        for f in DIR_SQL.glob("*.sql"):
             for c in get_creates(f.read_text()):
                 creates[create_to_table(c).name] = c
         return creates

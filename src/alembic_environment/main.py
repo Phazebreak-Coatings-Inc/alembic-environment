@@ -15,8 +15,13 @@ COPIER_REPO = "gh:Phazebreak-Coatings-Inc/alembic-environment"
 
 ANSWERS_FILE = ".alembic-environment-answers.yml"
 
-WORKSPACE_MEMBERS = ["database/models", "database/migrations", "database/environments"]
-WORKSPACE_NAMES = ["models", "migrations"]
+WORKSPACE_MEMBERS = [
+    "database/utils",
+    "database/models",
+    "database/migrations",
+    "database/environments",
+]
+WORKSPACE_NAMES = ["models", "migrations", "environments", "utils"]
 
 PACKAGES = [
     "alembic>=1.18.4",
@@ -133,8 +138,8 @@ def repair(
 ):
     print("Syncing dependencies and workspaces ...")
     p = Path(cwd).resolve()
-    write_pyproject(p, add_workspaces(get_pyproject(p), WORKSPACES))
+    write_pyproject(p, add_workspaces(get_pyproject(p), WORKSPACE_MEMBERS))
     sh("uv sync")
-    sh(f"uv add --workspace {' '.join(WORKSPACES)}")
+    sh(f"uv add --workspace {' '.join(WORKSPACE_NAMES)}")
     sh(f"uv add {' '.join(PACKAGES)}")
     print("Repair completed successfully.")

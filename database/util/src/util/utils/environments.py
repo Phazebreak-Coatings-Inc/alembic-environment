@@ -1,11 +1,8 @@
-import os
 from contextlib import contextmanager
-from pathlib import Path
 import time
-from typing import Annotated, Callable, Literal, cast
+from typing import Annotated, Literal, cast
 from abc import abstractmethod
 
-import typer
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from pydantic import BeforeValidator, validate_call
@@ -79,22 +76,17 @@ def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
 
 
 class MigrationSettings(BaseDatabaseSettings):
-    database_host = "localhost"
-    database_port = 5431
-    database_username = "migrations"
-    database_password = "migrations_password"
-    database_name = "migrations"
-
     def up(self):
         from .typer_utils import run_steps, sh
 
         m = self
         run_steps(
             fns=[
-                lambda: sh("docker pull postgres", check=True),
+                lambda: sh("docker pull postgres", check=True, silent=True),
                 lambda: sh(
                     f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
                     check=True,
+                    silent=True,
                 ),
                 lambda: wait_for_database(engine=m.engine),
             ],
@@ -116,7 +108,13 @@ class MigrationSettings(BaseDatabaseSettings):
         return self.down()
 
 
-migration_settings = MigrationSettings()
+migration_settings = MigrationSettings(
+    database_host="localhost",
+    database_port=5431,
+    database_username="migrations",
+    database_password="migrations_password",
+    database_name="migrations",
+)
 migration_database = migration_settings.temp
 
 
@@ -167,7 +165,7 @@ def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
 
 
 class AlembicSettings(BaseSettings):
-    env = "dev"
+    env: DatabaseEnvironment = "dev"
     auto_seed: bool = True
 
 

@@ -2,21 +2,16 @@ import ast
 from typing import Annotated
 
 import typer
-from migrations._cli.app import migrate
 from typer import Typer
 
-from models._cli.sql.main import (
-    INIT_FILE,
-    MODELS_DIR,
-    SQL_DIR,
-    SQLGenerator,
-    ruff_format,
-)
+from ...utils import PKG_MODELS, INIT_MODELS, DIR_SQL, ruff_format
+from ..migrations.app import migrate
+from .sql import SQLGenerator
 
 app = Typer(pretty_exceptions_show_locals=False)
 
 
-@app.command(help=f"Create models, validators, and typeddicts from {SQL_DIR}")
+@app.command(help=f"Create models, validators, and typeddicts from {DIR_SQL}")
 def g(
     dry_run: Annotated[
         bool,
@@ -40,7 +35,7 @@ def g(
 def repair():
     lines: list[str] = []
     all_names: list[str] = []
-    for f in sorted(MODELS_DIR.rglob("*.py")):
+    for f in sorted(PKG_MODELS.rglob("*.py")):
         if f.name == "__init__.py":
             continue
         tree = ast.parse(f.read_text())
@@ -50,9 +45,9 @@ def repair():
                 names += [t.id for t in n.targets if isinstance(t, ast.Name)]
         if not names:
             continue
-        module = ".".join(f.relative_to(MODELS_DIR).with_suffix("").parts)
+        module = ".".join(f.relative_to(PKG_MODELS).with_suffix("").parts)
         lines.append(f"from .{module} import " + ", ".join(names))
         all_names += names
     body = "\n".join(lines)
     body += "\n\n__all__ = [" + ", ".join(f'"{n}"' for n in all_names) + "]\n"
-    INIT_FILE.write_text(ruff_format(body))
+    INIT_MODELS.write_text(ruff_format(body))
