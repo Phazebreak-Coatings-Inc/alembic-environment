@@ -105,6 +105,7 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
 
     def tf(self, cmd: str) -> subprocess.CompletedProcess:
         from .typer_utils import sh
+
         return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=True, silent=False)
 
     def plan(self) -> subprocess.CompletedProcess:
