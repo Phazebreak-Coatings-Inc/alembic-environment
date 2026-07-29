@@ -9,6 +9,7 @@ from alembic.script import ScriptDirectory
 from pydantic import BeforeValidator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import create_engine
+from sqlmodel import Session
 from .paths import (
     ENV_DEV,
     ENV_PROD,
@@ -63,6 +64,13 @@ class BaseDatabaseSettings(ABC, BaseSettings):
     def engine(self):
         return create_engine(self.database_url)
 
+    def test_connection(self) -> None:
+        try:
+            with self.engine.connect() as conn:
+                conn.dialect.do_ping(conn)
+        except Exception as e:
+            raise RuntimeError(f"Database connection failed: {e}")
+
     @abstractmethod
     def up(self) -> None: ...
 
@@ -108,17 +116,16 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
 
     def tf(self, cmd: str) -> subprocess.CompletedProcess:
         from .typer_utils import sh
-
         return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=True, silent=False)
 
-    def plan(self):
+    def plan(self) -> subprocess.CompletedProcess:
         self.tf("init")
-        self.tf("plan -out main.tfplan")
+        return self.tf("plan -out main.tfplan")
 
-    def apply(self):
+    def apply(self) -> subprocess.CompletedProcess:
         if not self.planned:
             self.plan()
-        self.tf("apply main.tfplan")
+        return self.tf("apply main.tfplan")
 
     def test(self) -> bool:
         try:
@@ -127,16 +134,20 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
         except Exception:
             return False
 
-    def destroy(self):
-        self.tf("destroy")
+    def destroy(self) -> subprocess.CompletedProcess:
+        return self.tf("destroy")
 
     @property
     def outputs(self):
         print(f"completed: {self.tf('output -json')}")
 
+    @abstractmethod
+    def map_outputs(self) -> None:
+        ...
+
     @property
     def database_url(self) -> str:
-        # load ouputs here
+        self.map_outputs()
         return (
             f"postgresql+psycopg://{self.database_username}:{self.database_password}"
             f"@{self.database_host}:{self.database_port}/{self.database_name}"
@@ -221,7 +232,7 @@ class StagingDatabaseSettings(TerraformedDatabaseSettings):
     def destroy(self): ...
 
 
-StagingDatabaseSettings.set_cwd(PKG_STAGING)
+StagingDatabaseSettings.set_cwd(PKG_PROD)
 
 
 class ProdDatabaseSettings(TerraformedDatabaseSettings):
