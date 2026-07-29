@@ -9,9 +9,17 @@ from alembic.script import ScriptDirectory
 from pydantic import BeforeValidator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import create_engine
-from .paths import ENV_DEV, ENV_PROD, ENV_STAGING, ENV_DEV_COMPOSE, PKG_PROD, PKG_STAGING
+from .paths import (
+    ENV_DEV,
+    ENV_PROD,
+    ENV_STAGING,
+    ENV_DEV_COMPOSE,
+    PKG_PROD,
+    PKG_STAGING,
+)
 
 ENVS = ["dev", "staging", "prod"]
+
 
 def is_valid_database_env(env: str) -> "DatabaseEnvironment":
     if env not in ENVS:
@@ -20,9 +28,11 @@ def is_valid_database_env(env: str) -> "DatabaseEnvironment":
         )
     return env  # type: ignore
 
+
 DatabaseEnvironment = Annotated[
     Literal["dev", "staging", "prod"], BeforeValidator(is_valid_database_env)
 ]
+
 
 def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
     for _ in range(attempts):
@@ -33,6 +43,7 @@ def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
         except Exception:
             time.sleep(delay)
     raise RuntimeError("Couldn't start database")
+
 
 class BaseDatabaseSettings(ABC, BaseSettings):
     database_host: str | None = "localhost"
@@ -72,6 +83,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
         finally:
             self.down()
 
+
 class TerraformedDatabaseSettings(BaseDatabaseSettings):
     __cwd__: ClassVar[Path | None] = None
 
@@ -81,14 +93,14 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
 
     @classmethod
     def get_cwd(cls) -> Path:
-        if not cls.__cwd__: 
+        if not cls.__cwd__:
             raise ValueError(f"Cwd for {cls.__name__} was never set")
         p = cls.__cwd__
         if not p.exists():
             raise FileNotFoundError(f"Cwd for {cls.__name__} does not exist at: {p}")
         if not p.is_dir():
             raise TypeError(f"Cwd for {cls.__name__} must be a directory")
-        return p 
+        return p
 
     @property
     def planned(self) -> bool:
@@ -96,6 +108,7 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
 
     def tf(self, cmd: str) -> subprocess.CompletedProcess:
         from .typer_utils import sh
+
         return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=True, silent=False)
 
     def plan(self):
@@ -162,8 +175,9 @@ class MigrationSettings(BaseDatabaseSettings):
     def destroy(self):
         return self.down()
 
-    def test(self): #Can't really test it no? Lol
+    def test(self):  # Can't really test it no? Lol
         return True
+
 
 migration_settings = MigrationSettings(
     database_host="localhost",
@@ -174,29 +188,28 @@ migration_settings = MigrationSettings(
 )
 migration_database = migration_settings.temp
 
+
 class DevDatabaseSettings(BaseDatabaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_DEV)
 
     def up(self):
         from .typer_utils import run_steps, sh
-        sh(
-            f"docker compose -f {ENV_DEV_COMPOSE} up", check=True
-        )
+
+        sh(f"docker compose -f {ENV_DEV_COMPOSE} up", check=True)
 
     def down(self):
         from .typer_utils import run_steps, sh
-        sh(
-            f"docker compose -f {ENV_DEV_COMPOSE} down"
-        )
+
+        sh(f"docker compose -f {ENV_DEV_COMPOSE} down")
 
     def destroy(self):
         from .typer_utils import run_steps, sh
-        sh(
-            f"docker compsoe -f {ENV_DEV_COMPOSE} down -v"
-        )
+
+        sh(f"docker compsoe -f {ENV_DEV_COMPOSE} down -v")
 
     def test(self):
         return True
+
 
 class StagingDatabaseSettings(TerraformedDatabaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_STAGING)
@@ -207,16 +220,19 @@ class StagingDatabaseSettings(TerraformedDatabaseSettings):
 
     def destroy(self): ...
 
+
 StagingDatabaseSettings.set_cwd(PKG_STAGING)
+
 
 class ProdDatabaseSettings(TerraformedDatabaseSettings):
     model_config = SettingsConfigDict(env_file=ENV_PROD)
-    
+
     def up(self): ...
 
     def down(self): ...
 
     def destroy(self): ...
+
 
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 

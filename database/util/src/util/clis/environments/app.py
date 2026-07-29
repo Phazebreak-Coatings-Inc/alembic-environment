@@ -11,13 +11,14 @@ def up(env: EnvArg):
     s = get_database_setting(env)
     s.up()
 
+
 @app.command(help="Turns off the database cluster for a specific environment.")
 def down(
-    env: EnvArg,
-    destroy: Annotated[bool, typer.Option("--destroy", "-d")] = False
+    env: EnvArg, destroy: Annotated[bool, typer.Option("--destroy", "-d")] = False
 ):
     s = get_database_setting(env)
     s.down() if not destroy else s.destroy()
+
 
 @app.command(help="Tests a database environment.")
 def test(

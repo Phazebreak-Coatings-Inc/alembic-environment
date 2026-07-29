@@ -40,6 +40,7 @@ def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProc
         typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None
 
+
 @validate_call
 def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
     sh(

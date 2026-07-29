@@ -129,6 +129,7 @@ It extends the generated model at ```./models/src/models/users/base.py```:
 ```python
 ...
 
+
 class UsersBase(SQLModel):
     __table_args__ = (
         PrimaryKeyConstraint("user_id", name="users_pkey"),

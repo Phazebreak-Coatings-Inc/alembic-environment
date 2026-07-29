@@ -33,6 +33,7 @@ Create your first model at ```./models/src/models/my_model.py```:
 ```python
 from sqlmodel import SQLModel, Field
 
+
 class MyTable(SQLModel, table=True):
     id: int = Field(primary_key=True, default=1)
 ```
