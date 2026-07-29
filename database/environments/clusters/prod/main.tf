@@ -1,5 +1,3 @@
-provider "digitalocean" {}
-
 module "cluster" {
   source           = "../modules/do/postgres-cluster"
   name             = "phazebreak-prod"

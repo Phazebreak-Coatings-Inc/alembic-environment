@@ -1,4 +1,9 @@
+module "cluster" {
+  source           = "../prod"
+}
+
 module "database" {
+
   source     = "../modules/do/postgres-database"
   cluster_id = module.cluster.id
   db_name    = "staging"
