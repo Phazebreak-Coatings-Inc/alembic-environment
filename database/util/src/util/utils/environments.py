@@ -36,6 +36,7 @@ DatabaseEnvironment = Annotated[
     Literal["dev", "staging", "prod"], BeforeValidator(is_valid_database_env)
 ]
 
+
 class BaseDatabaseSettings(ABC, BaseSettings):
     database_host: str | None = "localhost"
     database_port: int | None = 5432
@@ -80,6 +81,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             yield None
         finally:
             self.down()
+
 
 class TerraformedDatabaseSettings(BaseDatabaseSettings):
     __cwd__: ClassVar[Path | None] = None
@@ -133,13 +135,14 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
     @property
     def outputs(self) -> dict:
         try:
-            return json.loads(self.tf('output -json').stdout)
+            return json.loads(self.tf("output -json").stdout)
         except Exception as e:
-            raise Exception(f"Couldn't process terraform outputs from command line: {e}") 
+            raise Exception(
+                f"Couldn't process terraform outputs from command line: {e}"
+            )
 
-    #@abstractmethod
-    def map_outputs(self) -> None:
-        ...
+    # @abstractmethod
+    def map_outputs(self) -> None: ...
 
     @property
     def database_url(self) -> str:
@@ -244,6 +247,7 @@ class ProdDatabaseSettings(TerraformedDatabaseSettings):
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 
 DatabaseSetting = DevDatabaseSettings | StagingDatabaseSettings | ProdDatabaseSettings
+
 
 @validate_call
 def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
