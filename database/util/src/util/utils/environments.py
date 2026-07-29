@@ -116,6 +116,7 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
 
     def tf(self, cmd: str) -> subprocess.CompletedProcess:
         from .typer_utils import sh
+
         return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=True, silent=False)
 
     def plan(self) -> subprocess.CompletedProcess:
@@ -142,8 +143,7 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
         print(f"completed: {self.tf('output -json')}")
 
     @abstractmethod
-    def map_outputs(self) -> None:
-        ...
+    def map_outputs(self) -> None: ...
 
     @property
     def database_url(self) -> str:
