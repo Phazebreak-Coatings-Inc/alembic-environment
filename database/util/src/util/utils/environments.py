@@ -1,4 +1,6 @@
 from contextlib import contextmanager
+import os
+import json
 import time
 import subprocess
 from typing import Annotated, Literal, cast, ClassVar
@@ -33,18 +35,6 @@ def is_valid_database_env(env: str) -> "DatabaseEnvironment":
 DatabaseEnvironment = Annotated[
     Literal["dev", "staging", "prod"], BeforeValidator(is_valid_database_env)
 ]
-
-
-def wait_for_database(engine, attempts: int = 60, delay: float = 0.5):
-    for _ in range(attempts):
-        try:
-            with engine.connect() as c:
-                c.exec_driver_sql("SELECT 1")
-            return
-        except Exception:
-            time.sleep(delay)
-    raise RuntimeError("Couldn't start database")
-
 
 class BaseDatabaseSettings(ABC, BaseSettings):
     database_host: str | None = "localhost"
@@ -91,7 +81,6 @@ class BaseDatabaseSettings(ABC, BaseSettings):
         finally:
             self.down()
 
-
 class TerraformedDatabaseSettings(BaseDatabaseSettings):
     __cwd__: ClassVar[Path | None] = None
 
@@ -125,7 +114,10 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
     def apply(self) -> subprocess.CompletedProcess:
         if not self.planned:
             self.plan()
-        return self.tf("apply main.tfplan")
+        token = os.environ.get("DIGITAL_OCEAN_TOKEN")
+        if not token:
+            raise EnvironmentError("Missing DIGITAL_OCEAN_TOKEN in environment")
+        return self.tf(f'apply main.tfplan -var "do_token={token}')
 
     def test(self) -> bool:
         try:
@@ -138,10 +130,13 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
         return self.tf("destroy")
 
     @property
-    def outputs(self):
-        print(f"completed: {self.tf('output -json')}")
+    def outputs(self) -> dict:
+        try:
+            return json.loads(self.tf('output -json').stdout)
+        except Exception as e:
+            raise Exception(f"Couldn't process terraform outputs from command line: {e}") 
 
-    @abstractmethod
+    #@abstractmethod
     def map_outputs(self) -> None:
         ...
 
@@ -167,7 +162,7 @@ class MigrationSettings(BaseDatabaseSettings):
                     check=True,
                     silent=True,
                 ),
-                lambda: wait_for_database(engine=m.engine),
+                lambda: self.test_connection(),
             ],
             label="Starting Migrations Database",
         )
@@ -248,7 +243,6 @@ class ProdDatabaseSettings(TerraformedDatabaseSettings):
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 
 DatabaseSetting = DevDatabaseSettings | StagingDatabaseSettings | ProdDatabaseSettings
-
 
 @validate_call
 def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:

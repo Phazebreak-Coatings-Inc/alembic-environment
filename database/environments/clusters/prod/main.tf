@@ -1,3 +1,9 @@
+variable "do_token" {}
+
+provider "digitalocean" {
+  token = var.do_token
+} 
+
 module "cluster" {
   source           = "../modules/do/postgres-cluster"
   name             = "alembic-environment"
