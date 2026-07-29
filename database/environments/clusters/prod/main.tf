@@ -12,6 +12,6 @@ module "cluster" {
 module "database" {
   source     = "../modules/do/postgres-database"
   cluster_id = module.cluster.id
-  db_name    = "prod_db"
+  db_name    = "prod"
   user_name  = "prod_user"
 }
