@@ -30,16 +30,15 @@ DryRun = Annotated[
 ]
 
 
-def sh(cmd: str, silent=False, check=True, **kwargs):
+def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProcess:
     if silent:
         kwargs.setdefault("stdout", subprocess.DEVNULL)
         kwargs.setdefault("stderr", subprocess.DEVNULL)
     try:
-        subprocess.run(cmd, shell=True, check=check, **kwargs)
+        return subprocess.run(cmd, shell=True, check=check, **kwargs)
     except subprocess.CalledProcessError as e:
         typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
-        raise typer.Exit(e.returncode) from None  #
-
+        raise typer.Exit(e.returncode) from None
 
 @validate_call
 def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):

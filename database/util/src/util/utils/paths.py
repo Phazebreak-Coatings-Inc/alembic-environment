@@ -14,3 +14,17 @@ TESTS_MIGRATIONS = WS_MIGRATIONS / "tests"
 PKG_ENVIRONMENTS = WS_ENVIRONMENTS / "src" / "environments"
 DIR_SEEDS = PKG_MIGRATIONS / "seeds"
 INIT_MODELS = PKG_MODELS / "__init__.py"
+
+
+PKG_CLUSTERS = WS_ENVIRONMENTS / "clusters"
+
+PKG_PROD = PKG_CLUSTERS / "prod"
+ENV_PROD = PKG_PROD / ".env.prod"
+
+PKG_DEV = PKG_CLUSTERS / "dev"
+ENV_DEV = PKG_DEV / ".env.dev"
+ENV_DEV_COMPOSE = PKG_DEV / "compose.dev.yml"
+
+PKG_STAGING = PKG_CLUSTERS / "staging"
+ENV_STAGING = PKG_STAGING / ".env.staging"
+
