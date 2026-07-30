@@ -63,7 +63,9 @@ class BaseDatabaseSettings(ABC, BaseSettings):
                 conn.execute(text("SELECT 1"))
         except Exception as e:
             raise RuntimeError(f"Database connection failed: {e}") from e
-        print(f"[alembic-environment] Pinged {self.__class__.__name__} in {(time.perf_counter() - start) * 1000:.1f}ms")
+        print(
+            f"[alembic-environment] Pinged {self.__class__.__name__} in {(time.perf_counter() - start) * 1000:.1f}ms"
+        )
 
     @abstractmethod
     def up(self) -> None: ...
@@ -84,6 +86,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             yield None
         finally:
             self.down()
+
 
 class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
     __cwd__: ClassVar[Path | None] = None
@@ -109,6 +112,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
 
     def tf(self, cmd: str) -> subprocess.CompletedProcess:
         from .typer_utils import sh
+
         return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=True, silent=False)
 
     def plan(self) -> subprocess.CompletedProcess:
@@ -118,7 +122,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
     def apply(self) -> subprocess.CompletedProcess:
         if not self.planned:
             self.plan()
-        return self.tf(f'apply main.tfplan')
+        return self.tf(f"apply main.tfplan")
 
     def test(self) -> bool:
         try:
@@ -131,7 +135,9 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
         self.apply()
 
     def down(self) -> None:
-        raise Exception("Terraformed databases cannot be 'downed' like containerized databases.")
+        raise Exception(
+            "Terraformed databases cannot be 'downed' like containerized databases."
+        )
 
     def destroy(self) -> subprocess.CompletedProcess:
         typer.confirm(
@@ -154,8 +160,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
             )
 
     @abstractmethod
-    def map_outputs(self) -> Self:
-        ...
+    def map_outputs(self) -> Self: ...
 
     @property
     def database_url(self) -> str:
@@ -214,6 +219,7 @@ migration_settings = MigrationSettings(
 )
 migration_database = migration_settings.temp
 
+
 class DevDatabaseSettings(BaseDatabaseSettings):
     def up(self):
         from .typer_utils import run_steps, sh
@@ -235,14 +241,16 @@ class DevDatabaseSettings(BaseDatabaseSettings):
         with self.temp():
             self.ping()
 
+
 dev_settings = DevDatabaseSettings(
     database_host="localhost",
     database_port=5432,
     database_name="dev_db",
     database_username="dev_user",
-    database_password="dev_password"
+    database_password="dev_password",
 )
 dev_database = dev_settings.temp
+
 
 class StagingDatabaseSettings(TerraformedDatabaseSettings):
     def sanitize(self): ...
@@ -251,13 +259,15 @@ class StagingDatabaseSettings(TerraformedDatabaseSettings):
 
     def map_outputs(self): ...
 
+
 StagingDatabaseSettings.set_cwd(PKG_PROD)
 
 staging_settings = StagingDatabaseSettings()
 
+
 class ProdDatabaseSettings(TerraformedDatabaseSettings):
-    def map_outputs(self):
-        ... 
+    def map_outputs(self): ...
+
 
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 
@@ -277,6 +287,7 @@ def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
         case "prod":
             s = prod_settings
     return s
+
 
 class AlembicSettings(BaseSettings):
     env: DatabaseEnvironment = "dev"
