@@ -1,5 +1,3 @@
-import subprocess
-import uuid
 from pathlib import Path
 from typing import Annotated
 from pydantic import validate_call
@@ -19,6 +17,8 @@ from ...utils import (
     migration_database as mdb,
     alembic_check,
     DIR_SEEDS,
+    DIR_VERSIONS,
+    git_bot
 )
 
 from .seeding import execute_seeds, generate_seed_file
@@ -33,7 +33,6 @@ app = typer.Typer()
 @validate_call
 def up(v: VerboseOption = False):
     return ms.up()
-
 
 @app.command(help="Shut down the migrations database.")
 def down():
@@ -93,8 +92,10 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
 def apply(
     env: EnvArg = alembic_env,
     target: str = "head",
+    interactive: Annotated[bool, typer.Option("-i", "--interactive", help="Whether to confirm application.")] = True
 ):
-    typer.confirm(f"Upgrade {env} to {target}?", abort=True)
+    if interactive:
+        typer.confirm(f"Upgrade {env} to {target}?", abort=True)
     alembic("upgrade target", env)
 
 
@@ -120,7 +121,6 @@ def init():
         )
         alembic_test(throw=True)
 
-
 @app.command(
     help="Run a autonomous CICD workflow that checks for drift, tests, and commits to a separate branch with a pull-request."
 )
@@ -130,26 +130,15 @@ def cicd():
             alembic_check()
             alembic_test(throw=False)
             return
-        except subprocess.CalledProcessError:
+        except typer.Exit:
+            pass
+
+        with git_bot("chore: autogenerate alembic revision", path=DIR_VERSIONS):
             if len(alembic_heads()) > 1:
                 sh('alembic merge -m "merge heads" heads')
             sh("alembic upgrade head", check=True)
-            sh(
-                "alembic revision --autogenerate -m auto",
-                check=True,
-            )
-        try:
-            # TODO: this needs to be replaced from main to whatever the current branch is and auto merged or else tons of spam, etc etc ...
-            raise NotImplementedError("Current solution is bad")
-            b = f"cicd/alembic-migration-{uuid.uuid4()}"
-            sh(f"git switch -c {b}")
-            sh("uvx ruff format .")
-            sh("git commit -a")
-            sh("git push")
-            sh(f"gh pr create --fill --base main --head {b}")
-
-        except Exception as e:
-            raise Exception(f"Error creating merging new migrations: {e}")
+            sh('alembic revision --autogenerate -m "auto"', check=True)
+            alembic_test(throw=True)
 
 
 @app.command(
@@ -157,4 +146,4 @@ def cicd():
 )
 def cicd_apply():
     for env in ["staging", "prod"]:
-        apply(env)  # type: ignore
+        apply(env, interactive=False) #type: ignore

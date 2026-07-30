@@ -248,7 +248,7 @@ class DevDatabaseSettings(BaseDatabaseSettings):
         from .typer_utils import run_steps, sh
 
         sh(f"docker compose -f {ENV_DEV_COMPOSE} up", check=True)
-        self.ping()
+        self.ping(verbose=True)
 
     def down(self):
         from .typer_utils import run_steps, sh
@@ -262,7 +262,7 @@ class DevDatabaseSettings(BaseDatabaseSettings):
 
     def test(self):
         with self.temp():
-            self.ping()
+            self.ping(verbose=True)
 
 
 dev_settings = DevDatabaseSettings(
