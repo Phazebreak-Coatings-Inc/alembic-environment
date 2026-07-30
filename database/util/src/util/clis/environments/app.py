@@ -31,4 +31,4 @@ def test(
 @app.command(help="Ping a database environment.")
 def ping(env: EnvArg):
     s = get_database_setting(env)
-    s.ping()
+    s.ping(verbose=True)
