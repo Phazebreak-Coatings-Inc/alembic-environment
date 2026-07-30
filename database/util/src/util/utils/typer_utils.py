@@ -46,7 +46,7 @@ def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
     sh(
         f"alembic {cmd}",
         check=True,
-        env={**os.environ, "alembic_env": env},
+        env={**os.environ, "ALEMBIC_ENV": env},
     )
 
 
