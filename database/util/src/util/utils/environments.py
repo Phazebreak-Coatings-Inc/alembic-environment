@@ -4,7 +4,17 @@ import os
 import json
 import time
 import subprocess
-from typing import Annotated, Literal, cast, ClassVar, Self, Mapping, TypedDict, Any, Callable
+from typing import (
+    Annotated,
+    Literal,
+    cast,
+    ClassVar,
+    Self,
+    Mapping,
+    TypedDict,
+    Any,
+    Callable,
+)
 from abc import abstractmethod, ABC
 from pathlib import Path
 from alembic.config import Config
@@ -80,7 +90,9 @@ class BaseDatabaseSettings(ABC, BaseSettings):
                 last = e
                 time.sleep(delay)
                 if verbose and attempts > 1:
-                    typer.secho(f"\n[alembic-environment] Waiting for {self.database_name} ({i + 1}/{attempts})...")
+                    typer.secho(
+                        f"\n[alembic-environment] Waiting for {self.database_name} ({i + 1}/{attempts})..."
+                    )
         raise RuntimeError(
             f"Database connection to {self.database_name} failed after "
             f"{attempts} attempt(s): {last}"
@@ -88,6 +100,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
 
     def up(self) -> None:
         from .typer_utils import run_steps
+
         self.start()
         run_steps(fns=self.up_steps(), label="Running startup steps...")
 
@@ -97,7 +110,9 @@ class BaseDatabaseSettings(ABC, BaseSettings):
     def up_steps(self) -> list[Callable]:
         return [
             self.ping,
-            lambda: typer.secho(f"\n[alembic-environment] Modify {self.__class__.__name__}.up_steps to run fns after startup.")
+            lambda: typer.secho(
+                f"\n[alembic-environment] Modify {self.__class__.__name__}.up_steps to run fns after startup."
+            ),
         ]
 
     @abstractmethod
@@ -304,6 +319,7 @@ class DevDatabaseSettings(BaseDatabaseSettings):
     def test(self):
         with self.temp():
             return True
+
 
 dev_settings = DevDatabaseSettings(
     database_host="localhost",

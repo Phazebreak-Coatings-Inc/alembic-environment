@@ -19,7 +19,7 @@ from ...utils import (
     DIR_SEEDS,
     DIR_VERSIONS,
     git_bot,
-    get_database_setting
+    get_database_setting,
 )
 
 from .seeding import execute_seeds, generate_seed_file
