@@ -1,16 +1,17 @@
 from contextlib import contextmanager
+import typer
 import os
 import json
 import time
 import subprocess
-from typing import Annotated, Literal, cast, ClassVar
+from typing import Annotated, Literal, cast, ClassVar, Self, Mapping
 from abc import abstractmethod, ABC
 from pathlib import Path
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from pydantic import BeforeValidator, validate_call
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlmodel import Session
 from .paths import (
     ENV_DEV,
@@ -54,12 +55,14 @@ class BaseDatabaseSettings(ABC, BaseSettings):
     def engine(self):
         return create_engine(self.database_url)
 
-    def test_connection(self) -> None:
+    def ping(self) -> None:
+        start = time.perf_counter()
         try:
             with self.engine.connect() as conn:
-                conn.dialect.do_ping(conn)
+                conn.execute(text("SELECT 1"))
         except Exception as e:
-            raise RuntimeError(f"Database connection failed: {e}")
+            raise RuntimeError(f"Database connection failed: {e}") from e
+        print(f"[alembic-environment] Pinged {self.__class__.__name__} in {(time.perf_counter() - start) * 1000:.1f}ms")
 
     @abstractmethod
     def up(self) -> None: ...
@@ -81,7 +84,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
         finally:
             self.down()
 
-class TerraformedDatabaseSettings(BaseDatabaseSettings):
+class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
     __cwd__: ClassVar[Path | None] = None
 
     @classmethod
@@ -105,7 +108,6 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
 
     def tf(self, cmd: str) -> subprocess.CompletedProcess:
         from .typer_utils import sh
-
         return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=True, silent=False)
 
     def plan(self) -> subprocess.CompletedProcess:
@@ -115,10 +117,7 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
     def apply(self) -> subprocess.CompletedProcess:
         if not self.planned:
             self.plan()
-        token = os.environ.get("DIGITAL_OCEAN_TOKEN")
-        if not token:
-            raise EnvironmentError("Missing DIGITAL_OCEAN_TOKEN in environment")
-        return self.tf(f'apply main.tfplan -var "do_token={token}')
+        return self.tf(f'apply main.tfplan')
 
     def test(self) -> bool:
         try:
@@ -127,18 +126,32 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
         except Exception:
             return False
 
+    def up(self) -> None:
+        self.apply()
+
+    def down(self) -> None:
+        raise Exception("Terraformed databases cannot be 'downed' like containerized databases.")
+
     def destroy(self) -> subprocess.CompletedProcess:
+        typer.confirm(
+            "Are you sure you want to destroy? This will permanently delete your database.",
+            abort=True,
+        )
+        typer.confirm(
+            "For realsies?",
+            abort=True,
+        )
         return self.tf("destroy")
 
     @property
-    def outputs(self) -> dict:
+    def outputs(self) -> OutputsShape:
         try:
             return json.loads(self.tf('output -json').stdout)
         except Exception as e:
             raise Exception(f"Couldn't process terraform outputs from command line: {e}") 
 
-    #@abstractmethod
-    def map_outputs(self) -> None:
+    @abstractmethod
+    def map_outputs(self) -> Self:
         ...
 
     @property
@@ -148,6 +161,9 @@ class TerraformedDatabaseSettings(BaseDatabaseSettings):
             f"postgresql+psycopg://{self.database_username}:{self.database_password}"
             f"@{self.database_host}:{self.database_port}/{self.database_name}"
         )
+
+    def temp(self) -> None:
+        raise Exception("Can't spin up 'temp' for a terraformed database")
 
 
 class MigrationSettings(BaseDatabaseSettings):
@@ -163,7 +179,7 @@ class MigrationSettings(BaseDatabaseSettings):
                     check=True,
                     silent=True,
                 ),
-                lambda: self.test_connection(),
+                lambda: self.ping(),
             ],
             label="Starting Migrations Database",
         )
@@ -195,14 +211,12 @@ migration_settings = MigrationSettings(
 )
 migration_database = migration_settings.temp
 
-
 class DevDatabaseSettings(BaseDatabaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_DEV)
-
     def up(self):
         from .typer_utils import run_steps, sh
 
         sh(f"docker compose -f {ENV_DEV_COMPOSE} up", check=True)
+        self.ping()
 
     def down(self):
         from .typer_utils import run_steps, sh
@@ -212,51 +226,54 @@ class DevDatabaseSettings(BaseDatabaseSettings):
     def destroy(self):
         from .typer_utils import run_steps, sh
 
-        sh(f"docker compsoe -f {ENV_DEV_COMPOSE} down -v")
+        sh(f"docker compose -f {ENV_DEV_COMPOSE} down -v")
 
     def test(self):
-        return True
+        with self.temp():
+            self.ping()
 
+dev_settings = DevDatabaseSettings(
+    database_host="localhost",
+    database_port=5432,
+    database_name="dev_db",
+    database_username="dev_user",
+    database_password="dev_password"
+)
+dev_database = dev_settings.temp
 
 class StagingDatabaseSettings(TerraformedDatabaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_STAGING)
+    def sanitize(self): ...
 
-    def up(self): ...
+    def stage(self): ...
 
-    def down(self): ...
-
-    def destroy(self): ...
-
+    def map_outputs(self): ...
 
 StagingDatabaseSettings.set_cwd(PKG_PROD)
 
+staging_settings = StagingDatabaseSettings()
 
 class ProdDatabaseSettings(TerraformedDatabaseSettings):
-    model_config = SettingsConfigDict(env_file=ENV_PROD)
-
-    def up(self): ...
-
-    def down(self): ...
-
-    def destroy(self): ...
-
+    def map_outputs(self):
+        ... 
 
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 
+prod_settings = ProdDatabaseSettings()
+
 DatabaseSetting = DevDatabaseSettings | StagingDatabaseSettings | ProdDatabaseSettings
+
 
 @validate_call
 def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
     s = None
     match env:
         case "dev":
-            s = DevDatabaseSettings()
+            s = dev_settings
         case "staging":
-            s = StagingDatabaseSettings()
+            s = staging_settings
         case "prod":
-            s = ProdDatabaseSettings()
+            s = prod_settings
     return s
-
 
 class AlembicSettings(BaseSettings):
     env: DatabaseEnvironment = "dev"
