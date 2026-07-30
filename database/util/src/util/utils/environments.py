@@ -104,8 +104,12 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
         return p
 
     @property
+    def plan_file(self) -> Path:
+        return self.get_cwd() / "main.tfplan"
+
+    @property
     def planned(self) -> bool:
-        return (self.get_cwd() / "main.tfplan").exists()
+        return self.plan_file.exists()
 
     def tf(self, cmd: str) -> subprocess.CompletedProcess:
         from .typer_utils import sh
@@ -115,10 +119,12 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
         self.tf("init")
         return self.tf("plan -out main.tfplan")
 
-    def apply(self) -> subprocess.CompletedProcess:
-        if not self.planned:
-            self.plan()
-        return self.tf(f'apply main.tfplan')
+    def apply(self):
+        self.plan()
+        try:
+            self.tf("apply main.tfplan")
+        finally:
+            self.plan_file.unlink(missing_ok=True)
 
     def test(self) -> bool:
         try:

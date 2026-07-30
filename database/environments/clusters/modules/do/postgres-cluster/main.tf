@@ -9,7 +9,7 @@ resource "digitalocean_database_cluster" "alembic_environment_database_cluster" 
 
 resource "digitalocean_database_firewall" "alembic_environment_database_firewall" {
   count      = length(var.firewall_rules) > 0 ? 1 : 0
-  cluster_id = digitalocean_database_cluster.this.id
+  cluster_id = digitalocean_database_cluster.alembic_environment_database_cluster.id
 
   dynamic "rule" {
     for_each = var.firewall_rules
