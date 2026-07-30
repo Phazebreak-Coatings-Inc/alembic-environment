@@ -5,6 +5,7 @@ from pathlib import Path
 GIT_BOT_NAME = "github-actions[bot]"
 GIT_BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
 
+
 @contextmanager
 def git_bot(message: str, path: Path = Path(".")):
     yield
