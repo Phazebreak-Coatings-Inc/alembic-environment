@@ -9,7 +9,13 @@ from abc import abstractmethod, ABC
 from pathlib import Path
 from alembic.config import Config
 from alembic.script import ScriptDirectory
-from pydantic import BeforeValidator, validate_call, BaseModel, SecretStr, model_validator
+from pydantic import (
+    BeforeValidator,
+    validate_call,
+    BaseModel,
+    SecretStr,
+    model_validator,
+)
 from functools import cached_property
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import create_engine, text
@@ -66,10 +72,14 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             with e.connect() as conn:
                 conn.execute(text("SELECT 1"))
         except Exception as e:
-            raise RuntimeError(f"Database connection to {self.database_name} failed: {e}") from e
+            raise RuntimeError(
+                f"Database connection to {self.database_name} failed: {e}"
+            ) from e
         t = (time.perf_counter() - start) * 1000
         if verbose:
-            print(f"[alembic-environment] Successfully pinged {self.database_name} in {t:.1f}ms")
+            print(
+                f"[alembic-environment] Successfully pinged {self.database_name} in {t:.1f}ms"
+            )
         return t
 
     @abstractmethod
@@ -92,6 +102,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
         finally:
             self.down()
 
+
 class TerraformOutput(BaseModel):
     value: str | int | SecretStr
     sensitive: bool
@@ -102,6 +113,7 @@ class TerraformOutput(BaseModel):
         if self.sensitive and not isinstance(self.value, SecretStr):
             self.value = SecretStr(str(self.value))
         return self
+
 
 class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     BaseDatabaseSettings
@@ -134,7 +146,14 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     def tf(self, cmd: str, **kwargs) -> subprocess.CompletedProcess:
         from .typer_utils import sh
 
-        return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=True, silent=False, text=True, **kwargs)
+        return sh(
+            f"terraform {cmd}",
+            cwd=self.get_cwd(),
+            check=True,
+            silent=False,
+            text=True,
+            **kwargs,
+        )
 
     def plan(self) -> subprocess.CompletedProcess:
         self.tf("init")
@@ -177,11 +196,18 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     @cached_property
     def outputs(self) -> dict[str, TerraformOutput]:
         result = self.tf("output -json -no-color", capture_output=True)
-        return {k: TerraformOutput.model_validate(v) for k, v in json.loads(result.stdout).items()}
+        return {
+            k: TerraformOutput.model_validate(v)
+            for k, v in json.loads(result.stdout).items()
+        }
 
     def get_output(self, key: str) -> Any:
         out = self.outputs[key]
-        return out.value.get_secret_value() if isinstance(out.value, SecretStr) else out.value
+        return (
+            out.value.get_secret_value()
+            if isinstance(out.value, SecretStr)
+            else out.value
+        )
 
     @abstractmethod
     def map_outputs(self) -> None: ...
@@ -196,6 +222,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
 
     def temp(self) -> None:
         raise Exception("Can't spin up 'temp' for a terraformed database")
+
 
 class MigrationSettings(BaseDatabaseSettings):
     def up(self):
@@ -288,12 +315,13 @@ class StagingDatabaseSettings(TerraformedDatabaseSettings[StagingOutputs]):
 
     def stage(self): ...
 
-    def map_outputs(self): 
+    def map_outputs(self):
         self.database_host = self.get_output("database_host")
         self.database_port = self.get_output("database_port")
         self.database_name = self.get_output("staging_name")
         self.database_username = self.get_output("staging_username")
         self.database_password = self.get_output("staging_password")
+
 
 StagingDatabaseSettings.set_cwd(PKG_PROD)
 
@@ -306,6 +334,7 @@ class ProdOutputs(TypedDict):
     prod_name: str
     prod_username: str
     prod_password: str
+
 
 class ProdDatabaseSettings(TerraformedDatabaseSettings[ProdOutputs]):
     def map_outputs(self):
