@@ -37,6 +37,7 @@ DatabaseEnvironment = Annotated[
     Literal["dev", "staging", "prod"], BeforeValidator(is_valid_database_env)
 ]
 
+
 class BaseDatabaseSettings(ABC, BaseSettings):
     database_host: str | None = "localhost"
     database_port: int | None = 5432
@@ -146,9 +147,11 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
     @property
     def outputs(self) -> OutputsShape:
         try:
-            return json.loads(self.tf('output -json').stdout)
+            return json.loads(self.tf("output -json").stdout)
         except Exception as e:
-            raise Exception(f"Couldn't process terraform outputs from command line: {e}") 
+            raise Exception(
+                f"Couldn't process terraform outputs from command line: {e}"
+            )
 
     @abstractmethod
     def map_outputs(self) -> Self:
