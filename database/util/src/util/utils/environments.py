@@ -88,7 +88,9 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
-class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](BaseDatabaseSettings):
+class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
+    BaseDatabaseSettings
+):
     __cwd__: ClassVar[Path | None] = None
 
     @classmethod
@@ -271,16 +273,18 @@ class StagingDatabaseSettings[StagingOutputs](TerraformedDatabaseSettings):
 
     def stage(self): ...
 
-    def map_outputs(self): 
+    def map_outputs(self):
         self.database_host = self.outputs["database_host"]
         self.database_port = self.outputs["database_port"]
         self.database_name = self.outputs["staging_name"]
         self.database_username = self.outputs["staging_username"]
         self.database_password = self.outputs["staging_password"]
 
+
 StagingDatabaseSettings.set_cwd(PKG_PROD)
 
 staging_settings = StagingDatabaseSettings()
+
 
 class ProdOutputs(TypedDict):
     database_host: str
@@ -289,6 +293,7 @@ class ProdOutputs(TypedDict):
     prod_username: str
     prod_password: str
 
+
 class ProdDatabaseSettings[ProdOutputs](TerraformedDatabaseSettings):
     def map_outputs(self):
         self.database_host = self.outputs["database_host"]
@@ -296,6 +301,7 @@ class ProdDatabaseSettings[ProdOutputs](TerraformedDatabaseSettings):
         self.database_name = self.outputs["prod_name"]
         self.database_username = self.outputs["prod_username"]
         self.database_password = self.outputs["prod_password"]
+
 
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 
