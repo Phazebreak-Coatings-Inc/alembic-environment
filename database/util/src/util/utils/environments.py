@@ -103,7 +103,9 @@ class TerraformOutput(BaseModel):
             self.value = SecretStr(str(self.value))
         return self
 
-class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](BaseDatabaseSettings):
+class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
+    BaseDatabaseSettings
+):
     __cwd__: ClassVar[Path | None] = None
 
     @classmethod
@@ -297,6 +299,7 @@ StagingDatabaseSettings.set_cwd(PKG_PROD)
 
 staging_settings = StagingDatabaseSettings()
 
+
 class ProdOutputs(TypedDict):
     database_host: str
     database_port: int
@@ -311,6 +314,7 @@ class ProdDatabaseSettings(TerraformedDatabaseSettings[ProdOutputs]):
         self.database_name = self.get_output("prod_name")
         self.database_username = self.get_output("prod_username")
         self.database_password = self.get_output("prod_password")
+
 
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 
