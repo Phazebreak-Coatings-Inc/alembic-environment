@@ -32,12 +32,15 @@ DryRun = Annotated[
 
 def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProcess:
     if silent:
-        kwargs.setdefault("stdout", subprocess.DEVNULL)
-        kwargs.setdefault("stderr", subprocess.DEVNULL)
+        kwargs.setdefault("stdout", subprocess.PIPE)
+        kwargs.setdefault("stderr", subprocess.PIPE)
+        kwargs.setdefault("text", True)
     try:
         return subprocess.run(cmd, shell=True, check=check, **kwargs)
     except subprocess.CalledProcessError as e:
-        typer.secho(f"failed: {cmd}", fg=typer.colors.RED, err=True)
+        typer.secho(f"\nFailed: {cmd}", fg=typer.colors.BRIGHT_RED, err=True)
+        if output := (e.stderr or e.stdout):
+            typer.secho(output.rstrip(), fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None
 
 
@@ -66,10 +69,8 @@ TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests"
 
 @validate_call
 def alembic_test(typ: TestType = "all", throw: bool = False):
-    sh(
-        "pytest" if typ == "all" else f"pytest {TESTS_MIGRATIONS}/test_{typ}.py",
-        check=throw,
-    )
+    target = TESTS_MIGRATIONS if typ == "all" else f"{TESTS_MIGRATIONS}/test_{typ}.py"
+    sh(f"pytest {target}", check=throw)
 
 
 def alembic_check():

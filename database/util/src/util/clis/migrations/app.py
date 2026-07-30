@@ -138,17 +138,16 @@ def cicd(
     with mdb():
         try:
             alembic_check()
+            drift = False
+        except typer.Exit:
+            drift = True
+
+        if not drift:
             alembic_test(throw=True)
             return
-        except typer.Exit:
-            pass
 
         if check:
-            typer.secho(
-                "Migration drift detected on a protected branch.",
-                fg=typer.colors.RED,
-                err=True,
-            )
+            typer.secho("Migration drift detected.", fg=typer.colors.RED, err=True)
             raise typer.Exit(1)
 
         with git_bot("chore: autogenerate alembic revision", DIR_VERSIONS):
@@ -156,6 +155,7 @@ def cicd(
                 sh('alembic merge -m "merge heads" heads')
             sh("alembic upgrade head", check=True)
             sh('alembic revision --autogenerate -m "auto"', check=True)
+            typer.secho("Generated and committed revision", fg=typer.colors.GREEN)
             alembic_test(throw=True)
 
 
@@ -164,6 +164,6 @@ def cicd(
 )
 def cicd_apply():
     for env in ["staging", "prod"]:
-        s = get_database_setting(env)
+        s = get_database_setting(env) #type: ignore
         s.ping()
         apply(env, interactive=False)  # type: ignore
