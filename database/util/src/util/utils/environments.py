@@ -4,7 +4,7 @@ import os
 import json
 import time
 import subprocess
-from typing import Annotated, Literal, cast, ClassVar, Self, Mapping, TypedDict, Any
+from typing import Annotated, Literal, cast, ClassVar, Self, Mapping, TypedDict, Any, Callable
 from abc import abstractmethod, ABC
 from pathlib import Path
 from alembic.config import Config
@@ -61,29 +61,44 @@ class BaseDatabaseSettings(ABC, BaseSettings):
 
     @property
     def engine(self):
-        return create_engine(self.database_url)
+        return create_engine(self.database_url, connect_args={"connect_timeout": 3})
 
-    def ping(self, verbose: bool = False) -> float:
-        e = self.engine
-        if verbose:
-            print(f"[alembic-environment] Attempting to ping {self.database_name} ...")
+    def ping(self, attempts: int = 1, delay: float = 0.5, verbose=False) -> None:
         start = time.perf_counter()
-        try:
-            with e.connect() as conn:
-                conn.execute(text("SELECT 1"))
-        except Exception as e:
-            raise RuntimeError(
-                f"Database connection to {self.database_name} failed: {e}"
-            ) from e
-        t = (time.perf_counter() - start) * 1000
-        if verbose:
-            print(
-                f"[alembic-environment] Successfully pinged {self.database_name} in {t:.1f}ms"
-            )
-        return t
+        last: Exception | None = None
+        for i in range(attempts):
+            try:
+                with self.engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                if verbose:
+                    typer.secho(
+                        f"[alembic-environment] Pinged {self.database_name} "
+                        f"in {(time.perf_counter() - start) * 1000:.1f}ms"
+                    )
+                return
+            except Exception as e:
+                last = e
+                time.sleep(delay)
+                if verbose and attempts > 1:
+                    typer.secho(f"\n[alembic-environment] Waiting for {self.database_name} ({i + 1}/{attempts})...")
+        raise RuntimeError(
+            f"Database connection to {self.database_name} failed after "
+            f"{attempts} attempt(s): {last}"
+        ) from last
+
+    def up(self) -> None:
+        from .typer_utils import run_steps
+        self.start()
+        run_steps(fns=self.up_steps(), label="Running startup steps...")
 
     @abstractmethod
-    def up(self) -> None: ...
+    def start(self) -> None: ...
+
+    def up_steps(self) -> list[Callable]:
+        return [
+            self.ping,
+            lambda: typer.secho(f"\n[alembic-environment] Modify {self.__class__.__name__}.up_steps to run fns after startup.")
+        ]
 
     @abstractmethod
     def down(self) -> None: ...
@@ -168,14 +183,13 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
 
     def test(self) -> bool:
         try:
-            self.plan()
+            self.ping()
             return True
         except Exception:
             return False
 
-    def up(self) -> None:
+    def start(self) -> None:
         self.apply()
-        self.ping(verbose=True)
 
     def down(self) -> None:
         raise Exception(
@@ -225,7 +239,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
 
 
 class MigrationSettings(BaseDatabaseSettings):
-    def up(self):
+    def start(self):
         from .typer_utils import run_steps, sh
 
         m = self
@@ -237,7 +251,7 @@ class MigrationSettings(BaseDatabaseSettings):
                     check=True,
                     silent=True,
                 ),
-                lambda: self.ping(),
+                lambda: self.ping(attempts=60),
             ],
             label="Starting Migrations Database",
         )
@@ -271,10 +285,10 @@ migration_database = migration_settings.temp
 
 
 class DevDatabaseSettings(BaseDatabaseSettings):
-    def up(self):
+    def start(self):
         from .typer_utils import run_steps, sh
 
-        sh(f"docker compose -f {ENV_DEV_COMPOSE} up", check=True)
+        sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
         self.ping(verbose=True)
 
     def down(self):
@@ -289,8 +303,7 @@ class DevDatabaseSettings(BaseDatabaseSettings):
 
     def test(self):
         with self.temp():
-            self.ping(verbose=True)
-
+            return True
 
 dev_settings = DevDatabaseSettings(
     database_host="localhost",

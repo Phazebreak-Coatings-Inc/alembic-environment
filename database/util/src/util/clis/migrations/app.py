@@ -19,6 +19,7 @@ from ...utils import (
     DIR_SEEDS,
     DIR_VERSIONS,
     git_bot,
+    get_database_setting
 )
 
 from .seeding import execute_seeds, generate_seed_file
@@ -163,4 +164,6 @@ def cicd(
 )
 def cicd_apply():
     for env in ["staging", "prod"]:
+        s = get_database_setting(env)
+        s.ping()
         apply(env, interactive=False)  # type: ignore
