@@ -4,7 +4,7 @@ import os
 import json
 import time
 import subprocess
-from typing import Annotated, Literal, cast, ClassVar, Self, Mapping
+from typing import Annotated, Literal, cast, ClassVar, Self, Mapping, TypedDict, Any
 from abc import abstractmethod, ABC
 from pathlib import Path
 from alembic.config import Config
@@ -88,7 +88,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
-class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
+class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](BaseDatabaseSettings):
     __cwd__: ClassVar[Path | None] = None
 
     @classmethod
@@ -166,7 +166,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping](BaseDatabaseSettings):
             )
 
     @abstractmethod
-    def map_outputs(self) -> Self: ...
+    def map_outputs(self) -> None: ...
 
     @property
     def database_url(self) -> str:
@@ -258,22 +258,44 @@ dev_settings = DevDatabaseSettings(
 dev_database = dev_settings.temp
 
 
-class StagingDatabaseSettings(TerraformedDatabaseSettings):
+class StagingOutputs(TypedDict):
+    database_host: str
+    database_port: int
+    staging_name: str
+    staging_username: str
+    staging_password: str
+
+
+class StagingDatabaseSettings[StagingOutputs](TerraformedDatabaseSettings):
     def sanitize(self): ...
 
     def stage(self): ...
 
-    def map_outputs(self): ...
-
+    def map_outputs(self): 
+        self.database_host = self.outputs["database_host"]
+        self.database_port = self.outputs["database_port"]
+        self.database_name = self.outputs["staging_name"]
+        self.database_username = self.outputs["staging_username"]
+        self.database_password = self.outputs["staging_password"]
 
 StagingDatabaseSettings.set_cwd(PKG_PROD)
 
 staging_settings = StagingDatabaseSettings()
 
+class ProdOutputs(TypedDict):
+    database_host: str
+    database_port: str
+    prod_name: str
+    prod_username: str
+    prod_password: str
 
-class ProdDatabaseSettings(TerraformedDatabaseSettings):
-    def map_outputs(self): ...
-
+class ProdDatabaseSettings[ProdOutputs](TerraformedDatabaseSettings):
+    def map_outputs(self):
+        self.database_host = self.outputs["database_host"]
+        self.database_port = self.outputs["database_port"]
+        self.database_name = self.outputs["prod_name"]
+        self.database_username = self.outputs["prod_username"]
+        self.database_password = self.outputs["prod_password"]
 
 ProdDatabaseSettings.set_cwd(PKG_PROD)
 
