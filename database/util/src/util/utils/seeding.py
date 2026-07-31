@@ -6,7 +6,7 @@ from pydantic import validate_call
 import inflection
 from sqlmodel import Session
 
-from ...utils import DatabaseEnvironment, get_database_setting, run_steps, DIR_SEEDS
+from . import DatabaseEnvironment, get_database_setting, run_steps, DIR_SEEDS
 
 SeedFunction = Callable[[Session], None]
 SeedRegistry = dict[DatabaseEnvironment, list[SeedFunction]]

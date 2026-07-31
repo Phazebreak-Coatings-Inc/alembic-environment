@@ -405,3 +405,5 @@ alembic_env: DatabaseEnvironment = cast(DatabaseEnvironment, alembic_settings.en
 
 def alembic_heads() -> list[str]:
     return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
+
+

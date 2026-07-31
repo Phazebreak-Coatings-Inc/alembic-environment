@@ -10,56 +10,20 @@ from sqlglot import exp
 import sqlglot
 from sqlalchemy import create_mock_engine
 
-from ...utils import (
-    DIR_SQL,
+from . import (
     PKG_MODELS,
+    TABLES_SQL,
     migration_settings as m,
     migration_database as mdb,
     ruff_format,
 )
 
-FileKind = Literal["base", "typeddict", "validator", "model"]
+FileKind = Literal["base", "model"]
 
 
 class Model:
     def __init__(self, class_def: ast.ClassDef):
         self.cls = class_def
-
-    @property
-    def fields(self) -> list[ast.AnnAssign]:
-        return [
-            s
-            for s in self.cls.body
-            if isinstance(s, ast.AnnAssign) and isinstance(s.target, ast.Name)
-        ]
-
-    def is_relationship(self, field: ast.AnnAssign) -> bool:
-        return (
-            isinstance(field.value, ast.Call)
-            and isinstance(field.value.func, ast.Name)
-            and field.value.func.id == "Relationship"
-        )
-
-    @staticmethod
-    def is_tablename(s: ast.stmt) -> bool:
-        return isinstance(s, ast.Assign) and any(
-            isinstance(t, ast.Name) and t.id == "__tablename__" for t in s.targets
-        )
-
-    @property
-    def scalars(self):
-        return [f for f in self.fields if not self.is_relationship(f)]
-
-    def get_field_name(self, field: ast.AnnAssign) -> str:
-        assert isinstance(field.target, ast.Name)
-        return field.target.id
-
-    def get_field_type(self, field: ast.AnnAssign):
-        return ast.unparse(field.annotation)
-
-    def is_optional(self, field: ast.AnnAssign) -> bool:
-        t = self.get_field_type(field)
-        return t.startswith("Optional[") or "| None" in t
 
     @property
     def name(self) -> str:
@@ -75,27 +39,6 @@ class Model:
             node
         )
 
-    def class_to_validator(self) -> str:
-        """Plain pydantic.BaseModel."""
-        lines = [f"class {self.name}Validator(BaseModel):"]
-        for f in self.scalars:
-            default = " = None" if self.is_optional(f) else ""
-            lines.append(
-                f"    {self.get_field_name(f)}: {self.get_field_type(f)}{default}"
-            )
-        return "from pydantic import BaseModel\n\n\n" + "\n".join(lines) + "\n"
-
-    def class_to_typeddict(self) -> str:
-        """Plain TypedDict."""
-        lines = [f"class {self.name}Dict(TypedDict):"]
-        for f in self.scalars:
-            t = self.get_field_type(f)
-            field = f"NotRequired[{t}]" if self.is_optional(f) else t
-            lines.append(f"    {self.get_field_name(f)}: {field}")
-        return (
-            "from typing import NotRequired, TypedDict\n\n\n" + "\n".join(lines) + "\n"
-        )
-
     def class_to_model(self) -> str:
         return (
             f"from .base import {self.name}Base\n\n\n"
@@ -106,15 +49,11 @@ class Model:
     def class_to_init(self) -> str:
         names = [
             f"{self.name}Base",
-            f"{self.name}Validator",
-            f"{self.name}Dict",
             self.name,
         ]
         imports = (
-            f"from .base import {self.name}Base\n"
-            f"from .validator import {self.name}Validator\n"
-            f"from .typeddict import {self.name}Dict\n"
-            f"from .model import {self.name}\n"
+            f"from .base import {names[0]}\n"
+            f"from .model import {names[1]}\n"
         )
         exports = "__all__ = [" + ", ".join(f'"{n}"' for n in names) + "]\n"
         return imports + "\n" + exports
@@ -129,17 +68,15 @@ class SQLGenerator:
         e = m.engine
         with mdb():
             with e.begin() as c:
-                for f in self.files:
-                    print(f"Applying {f.name}")
-                    c.exec_driver_sql(f.read_text())
+                c.exec_driver_sql(self.tables_file.read_text())
 
             md = MetaData()
             md.reflect(bind=e)
             self.code = ruff_format(g(md, e, options=[]).generate())
 
     @property
-    def files(self) -> list[Path]:
-        return list(DIR_SQL.glob("*.sql"))
+    def tables_file(self) -> Path:
+        return TABLES_SQL
 
     @property
     def tree(self) -> ast.Module:
@@ -168,8 +105,6 @@ class SQLGenerator:
 
             sources: dict[FileKind, str] = {
                 "base": model.class_to_base(),
-                "validator": model.class_to_validator(),
-                "typeddict": model.class_to_typeddict(),
             }
             for kind, body in sources.items():
                 model.get_path(kind).write_text(
@@ -247,6 +182,9 @@ def get_sql_from_orm(metadata: MetaData):
     return ddl
 
 
+def comment_out(sql: str) -> str:
+    return "\n".join(f"-- {line}" for line in sql.splitlines())
+
 class SQLReverseGenerator:
     def __init__(self, metadata: MetaData):
         self.metadata = metadata
@@ -261,11 +199,10 @@ class SQLReverseGenerator:
 
     @property
     def sql_creates(self) -> dict[str, exp.Create]:
-        creates = {}
-        for f in DIR_SQL.glob("*.sql"):
-            for c in get_creates(f.read_text()):
-                creates[create_to_table(c).name] = c
-        return creates
+        return {
+            create_to_table(c).name: c
+            for c in get_creates(TABLES_SQL.read_text())
+        }
 
     def reverse_table(self, table: str) -> str:
         sql_cols = create_to_columns(self.sql_creates[table])
@@ -278,5 +215,31 @@ class SQLReverseGenerator:
         return render_create(table, sql_cols + merge_columns(sql_cols, orm_only))
 
     def generate(self) -> dict[str, str]:
-        tables = self.sql_creates.keys() & self.orm_creates.keys()
-        return {t: self.reverse_table(t) for t in tables}
+        orm = self.orm_creates
+        out = {t: self.reverse_table(t) for t in self.sql_creates if t in orm}
+        for t, create in orm.items():
+            if t not in self.sql_creates:
+                out[t] = comment_out(create.sql(dialect=DIALECT, pretty=True))
+        return out
+
+    def write(self, path: Path = TABLES_SQL, dry_run: bool = False) -> str:
+        extra: list = [s for s in sqlglot.parse(path.read_text()) if not isinstance(s, exp.Create)]
+        if extra:
+            raise SQLParseError(
+                f"{path.name} contains {len(extra)} non-CREATE statement(s) that would be "
+                f"lost: {[s.sql(dialect=DIALECT)[:40] for s in extra]}"
+            )
+
+        reversed = self.generate()
+        ordered = list(self.sql_creates) + [t for t in reversed if t not in self.sql_creates]
+
+        parts = []
+        for t in ordered:
+            sql = reversed.get(t) or self.sql_creates[t].sql(dialect=DIALECT, pretty=True)
+            parts.append(sql if sql.lstrip().startswith("--") else sql + ";")
+        body = "\n\n".join(parts) + "\n"
+
+        if not dry_run:
+            path.write_text(body)
+
+        return body

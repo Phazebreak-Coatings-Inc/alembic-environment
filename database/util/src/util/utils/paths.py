@@ -7,7 +7,7 @@ print(DIR_DATABASE)
 WS_ENVIRONMENTS = DIR_DATABASE / "environments"
 WS_MIGRATIONS = DIR_DATABASE / "migrations"
 WS_MODELS = DIR_DATABASE / "models"
-DIR_SQL = WS_MODELS / "sql"
+TABLES_SQL = WS_MODELS / "tables.sql"
 PKG_MODELS = WS_MODELS / "src" / "models"
 PKG_MIGRATIONS = WS_MIGRATIONS / "src" / "migrations"
 TESTS_MIGRATIONS = WS_MIGRATIONS / "tests"
