@@ -1,6 +1,6 @@
-With ```alembic-environment```, prebuilt database environments are already available to you. The prebuilt ones are ```dev```, ```staging```, and ```prod```. ```dev``` is a locally run postgres container, whereas ```prod``` and ```staging``` are different databases on a Digital Ocean Cluster.
+With ```alembic-environment```, prebuilt database environments are already available to you. The prebuilt ones are ```dev```, ```staging```, and ```prod```. ```dev``` is a locally run postgres container, whereas ```prod``` and ```staging``` are different databases on a Digital Ocean Cluster. Uses ```postgres 18```
 
-## Setting Up ```dev```
+### Setting Up ```dev```
 
 To setup your ```dev``` environment. We don't need to pass any kind of environment variables, everything already comes out of the box.
 

@@ -1,4 +1,5 @@
 import typer
+import traceback
 import os
 from typing import Annotated, Callable
 import functools
@@ -35,9 +36,10 @@ def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProc
     try:
         return subprocess.run(cmd, shell=True, check=check, **kwargs)
     except subprocess.CalledProcessError as e:
-        typer.secho(f"\nFailed: {cmd}", fg=typer.colors.BRIGHT_RED, err=True)
-        if output := (e.stderr or e.stdout):
-            typer.secho(output.rstrip(), fg=typer.colors.RED, err=True)
+        if not silent:
+            typer.secho(f"\nFailed: {cmd}", fg=typer.colors.BRIGHT_RED, err=True)
+            if output := (e.stderr or e.stdout):
+                typer.secho(output.rstrip(), fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None
 
 def e(func):
@@ -49,7 +51,7 @@ def e(func):
         except (typer.Exit, typer.Abort):
             raise
         except Exception as e:
-            typer.secho(f"Exiting with code 1: {str(e)}", err=True, fg=typer.colors.RED)
+            typer.secho(f"{str(e)}", err=True, fg=typer.colors.RED)
             raise typer.Exit(1)
         raise typer.Exit(0)
     return wrapper

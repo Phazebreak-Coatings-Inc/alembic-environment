@@ -11,6 +11,7 @@ from ...utils import (
     alembic_heads,
     alembic_test,
     alembic_env,
+    alembic_migrate,
     sh,
     alembic,
     migration_settings as ms,

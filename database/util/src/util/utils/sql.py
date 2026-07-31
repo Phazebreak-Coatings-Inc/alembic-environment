@@ -223,12 +223,17 @@ class SQLReverseGenerator:
         return out
 
     def write(self, path: Path = TABLES_SQL, dry_run: bool = False) -> str:
-        extra: list = [s for s in sqlglot.parse(path.read_text()) if not isinstance(s, exp.Create)]
+        extra = [
+        s for s in sqlglot.parse(path.read_text()) if s is not None and not isinstance(s, exp.Create)
+        ]        
         if extra:
             raise SQLParseError(
                 f"{path.name} contains {len(extra)} non-CREATE statement(s) that would be "
                 f"lost: {[s.sql(dialect=DIALECT)[:40] for s in extra]}"
             )
+
+        if not self.sql_creates:
+            raise SQLParseError(f"No CREATE TABLE statements found in {path}")
 
         reversed = self.generate()
         ordered = list(self.sql_creates) + [t for t in reversed if t not in self.sql_creates]

@@ -2,7 +2,7 @@ variable "name" {}
 variable "region" {}
 
 variable "postgres_version" {
-  default = "16"
+  default = "18"
 }
 
 variable "size" {

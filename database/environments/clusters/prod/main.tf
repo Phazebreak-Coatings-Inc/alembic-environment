@@ -8,7 +8,7 @@ module "cluster" {
   source           = "../modules/do/postgres-cluster"
   name             = "alembic-environment"
   region           = "nyc1"
-  postgres_version = "16"
+  postgres_version = "18"
   size             = "db-s-2vcpu-4gb"
   node_count       = 2
 }

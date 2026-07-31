@@ -1,8 +1,10 @@
-The models package in ```alembic-environment``` has the ability to create multiple useful python objects from sql files in ```./models/sql```.
+#Model Generation
+
+The models package in ```alembic-environment``` has the ability to create multiple useful python objects from ```CREATE TABLE``` statements in in ```./models/tables.sql```.
 
 ##Declaring Your Table
 
-First, create a ```user.sql``` file at ```./models/sql``` and declare a table.
+First, open the ```tables.sql``` file in ```./models/sql``` and declare a table.
 
 ```sql
 CREATE TABLE users (

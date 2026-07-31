@@ -252,17 +252,17 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     def temp(self) -> None:
         raise Exception("Can't spin up 'temp' for a terraformed database")
 
-
 class MigrationSettings(BaseDatabaseSettings):
     def start(self):
         from .typer_utils import run_steps, sh
+        from .postgres import pull_postgres
 
         m = self
         run_steps(
             fns=[
-                lambda: sh("docker pull postgres", check=True, silent=True),
+                pull_postgres,
                 lambda: sh(
-                    f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres",
+                    f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres:18-alpine",
                     check=True,
                     silent=True,
                 ),

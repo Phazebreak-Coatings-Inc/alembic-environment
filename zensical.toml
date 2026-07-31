@@ -49,7 +49,7 @@ Copyright &copy; 2026 Phazebreak Coatings, Inc.
 #   { "Markdown in 5min" = "markdown.md" },
 # ]
 nav = [
-    { "Quickstart" = "quickstart.md" },
+    { "Quickstart" = "index.md" },
     { "Model Generation" = "model_generation.md"},
     { "Database Environments" = "database_environments.md" }
 ]
