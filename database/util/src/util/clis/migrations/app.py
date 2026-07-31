@@ -23,7 +23,7 @@ from ...utils import (
     get_database_setting,
     execute_seeds,
     generate_seed_file,
-    e
+    e,
 )
 
 
@@ -37,6 +37,7 @@ app = typer.Typer()
 @validate_call
 def up():
     return ms.up()
+
 
 @app.command(help="Shut down the migrations database.")
 def down():
@@ -73,7 +74,6 @@ def test(
 ):
     with mdb():
         alembic_test(typ="migrations" if not seed else "seeds", throw=throw)
-
 
 
 @app.command(

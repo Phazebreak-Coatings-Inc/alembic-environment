@@ -12,6 +12,7 @@ def up(env: EnvArg):
     s = get_database_setting(env)
     s.up()
 
+
 @app.command(help="Turns off the database cluster for a specific environment.")
 @e
 def down(

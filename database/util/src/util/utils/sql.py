@@ -51,10 +51,7 @@ class Model:
             f"{self.name}Base",
             self.name,
         ]
-        imports = (
-            f"from .base import {names[0]}\n"
-            f"from .model import {names[1]}\n"
-        )
+        imports = f"from .base import {names[0]}\nfrom .model import {names[1]}\n"
         exports = "__all__ = [" + ", ".join(f'"{n}"' for n in names) + "]\n"
         return imports + "\n" + exports
 
@@ -185,6 +182,7 @@ def get_sql_from_orm(metadata: MetaData):
 def comment_out(sql: str) -> str:
     return "\n".join(f"-- {line}" for line in sql.splitlines())
 
+
 class SQLReverseGenerator:
     def __init__(self, metadata: MetaData):
         self.metadata = metadata
@@ -199,10 +197,7 @@ class SQLReverseGenerator:
 
     @property
     def sql_creates(self) -> dict[str, exp.Create]:
-        return {
-            create_to_table(c).name: c
-            for c in get_creates(TABLES_SQL.read_text())
-        }
+        return {create_to_table(c).name: c for c in get_creates(TABLES_SQL.read_text())}
 
     def reverse_table(self, table: str) -> str:
         sql_cols = create_to_columns(self.sql_creates[table])
@@ -236,11 +231,15 @@ class SQLReverseGenerator:
             raise SQLParseError(f"No CREATE TABLE statements found in {path}")
 
         reversed = self.generate()
-        ordered = list(self.sql_creates) + [t for t in reversed if t not in self.sql_creates]
+        ordered = list(self.sql_creates) + [
+            t for t in reversed if t not in self.sql_creates
+        ]
 
         parts = []
         for t in ordered:
-            sql = reversed.get(t) or self.sql_creates[t].sql(dialect=DIALECT, pretty=True)
+            sql = reversed.get(t) or self.sql_creates[t].sql(
+                dialect=DIALECT, pretty=True
+            )
             parts.append(sql if sql.lstrip().startswith("--") else sql + ";")
         body = "\n\n".join(parts) + "\n"
 
