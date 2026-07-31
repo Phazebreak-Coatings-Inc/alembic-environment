@@ -252,6 +252,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     def temp(self) -> None:
         raise Exception("Can't spin up 'temp' for a terraformed database")
 
+
 class MigrationSettings(BaseDatabaseSettings):
     def start(self):
         from .typer_utils import run_steps, sh

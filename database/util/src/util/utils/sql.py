@@ -219,8 +219,10 @@ class SQLReverseGenerator:
 
     def write(self, path: Path = TABLES_SQL, dry_run: bool = False) -> str:
         extra = [
-        s for s in sqlglot.parse(path.read_text()) if s is not None and not isinstance(s, exp.Create)
-        ]        
+            s
+            for s in sqlglot.parse(path.read_text())
+            if s is not None and not isinstance(s, exp.Create)
+        ]
         if extra:
             raise SQLParseError(
                 f"{path.name} contains {len(extra)} non-CREATE statement(s) that would be "
