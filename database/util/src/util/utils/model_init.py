@@ -3,13 +3,14 @@ from .paths import PKG_MODELS, INIT_MODELS
 from .misc import ruff_format
 from pathlib import Path
 
+
 def model_exports(init: Path) -> list[str]:
     for n in ast.parse(init.read_text()).body:
         if isinstance(n, ast.Assign) and any(
             isinstance(t, ast.Name) and t.id == "__all__" for t in n.targets
         ):
             if isinstance(n.value, ast.List):
-                return [e.value for e in n.value.elts if isinstance(e, ast.Constant)] #type: ignore
+                return [e.value for e in n.value.elts if isinstance(e, ast.Constant)]  # type: ignore
     return []
 
 

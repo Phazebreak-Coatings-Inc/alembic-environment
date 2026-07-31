@@ -19,6 +19,7 @@ DryRun = Annotated[
     bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
 ]
 
+
 def run_steps(fns: list[Callable] | None = None, label: str | None = None):
     fns = fns or []
     with typer.progressbar(
@@ -26,6 +27,7 @@ def run_steps(fns: list[Callable] | None = None, label: str | None = None):
     ) as s:
         for fn in s:
             fn()
+
 
 def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProcess:
     if silent:
@@ -40,19 +42,23 @@ def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProc
             typer.secho(output.rstrip(), fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None
 
+
 def e(func):
     """Wraps in try except for with exit codes: 0 or 1"""
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except (typer.Exit, typer.Abort):
+        except typer.Exit, typer.Abort:
             raise
         except Exception as e:
             typer.secho(f"Exiting with code 1: {str(e)}", err=True, fg=typer.colors.RED)
             raise typer.Exit(1)
         raise typer.Exit(0)
+
     return wrapper
+
 
 @validate_call
 def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
@@ -90,6 +96,7 @@ def alembic_check():
     except subprocess.CalledProcessError as e:
         raise typer.Exit(e.returncode) from None
 
+
 def alembic_migrate(message: str = ""):
     if len(alembic_heads()) > 1:
         sh('alembic merge -m "merge heads" heads')
@@ -98,5 +105,3 @@ def alembic_migrate(message: str = ""):
         f'alembic revision --autogenerate -m "{message or "auto"}"',
         check=True,
     )
-
-
