@@ -25,6 +25,7 @@ jobs:
 
   migrations:
     name: Migration
+    needs: model-generation
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
