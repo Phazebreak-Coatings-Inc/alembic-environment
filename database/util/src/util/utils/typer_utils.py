@@ -101,6 +101,7 @@ def alembic_check():
 
 def alembic_migrate(message: str = ""):
     from .environments import alembic_heads
+
     if len(alembic_heads()) > 1:
         sh('alembic merge -m "merge heads" heads')
     sh("alembic upgrade head", check=True)
