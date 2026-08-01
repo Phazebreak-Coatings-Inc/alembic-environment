@@ -27,3 +27,4 @@ class UsersBase(SQLModel):
         default=None,
         sa_column=Column("join_date", Date, server_default=text("CURRENT_TIMESTAMP")),
     )
+    foobar: Optional[str] = Field(default=None, sa_column=Column("foobar", String(100)))
