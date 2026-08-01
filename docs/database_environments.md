@@ -15,10 +15,9 @@ atabase
 [+] up 2/2
  ✔ Network dev_default              Created     0.1s
  ✔ Container postgres_dev_container Created     0.2s
-[alembic-environment] Pinged dev_db in 3174.4ms     
+Pinged dev_db in 3174.4ms     
 Running startup steps...  [#-]   50%  00:00:03      
-[alembic-environment] Modify DevDatabaseSettings.up_
-steps to run fns after startup.
+Modify DevDatabaseSettings.up_steps to run fns after startup.
 Running startup steps...  [##]  100%
 PS C:\Users\miles\PycharmProjects\alembic-environmen
 t> 
@@ -33,7 +32,7 @@ PS C:\Users\miles\PycharmProjects\alembic-environmen
 t> uv run python -m environments ping dev
 C:\Users\miles\PycharmProjects\alembic-environment\d
 atabase
-[alembic-environment] Pinged dev_db in 3139.5ms     
+Pinged dev_db in 3139.5ms     
 PS C:\Users\miles\PycharmProjects\alembic-environmen
 t>
 ```

@@ -82,7 +82,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
                     conn.execute(text("SELECT 1"))
                 if verbose:
                     typer.secho(
-                        f"[alembic-environment] Pinged {self.database_name} "
+                        f"Pinged {self.database_name} "
                         f"in {(time.perf_counter() - start) * 1000:.1f}ms"
                     )
                 return
@@ -91,7 +91,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
                 time.sleep(delay)
                 if verbose and attempts > 1:
                     typer.secho(
-                        f"\n[alembic-environment] Waiting for {self.database_name} ({i + 1}/{attempts})..."
+                        f"\nWaiting for {self.database_name} ({i + 1}/{attempts})..."
                     )
         raise RuntimeError(
             f"Database connection to {self.database_name} failed after "
@@ -111,7 +111,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
         return [
             self.ping,
             lambda: typer.secho(
-                f"\n[alembic-environment] Modify {self.__class__.__name__}.up_steps to run fns after startup."
+                f"\nModify {self.__class__.__name__}.up_steps to run fns after startup."
             ),
         ]
 

@@ -8,8 +8,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  model-generation:
+    name: Model Generation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install
+      - run: uv sync
+      - run: uv run python -m models g
+
   migrations:
-    name: Migrate 
+    name: Migration
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -22,6 +36,20 @@ jobs:
       - run: uv python install
       - run: uv sync
       - run: uv run python -m migrations cicd
+
+  model-generation:
+    name: Model Generation
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv python install
+      - run: uv sync
+      - run: uv run python - models rg
 
   drift-check:
     name: Drift Check (main)
