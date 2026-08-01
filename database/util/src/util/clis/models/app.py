@@ -57,6 +57,7 @@ def repair(dry_run: DryRun = False):
 @app.command(help="CICD pipeline for generating and reverse generating models.")
 def cicd():
     from ...utils import git_bot
+
     with git_bot("chore: regenerate models from tables.sql", PKG_MODELS):
         g()
     with git_bot("chore: reverse-generate tables.sql", TABLES_SQL):
