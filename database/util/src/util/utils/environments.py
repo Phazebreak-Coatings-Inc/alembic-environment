@@ -1,6 +1,5 @@
 from contextlib import contextmanager
 import typer
-import os
 import json
 import time
 import subprocess
@@ -9,7 +8,6 @@ from typing import (
     Literal,
     cast,
     ClassVar,
-    Self,
     Mapping,
     TypedDict,
     Any,
@@ -27,16 +25,11 @@ from pydantic import (
     model_validator,
 )
 from functools import cached_property
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings
 from sqlalchemy import create_engine, text
-from sqlmodel import Session
 from .paths import (
-    ENV_DEV,
-    ENV_PROD,
-    ENV_STAGING,
     ENV_DEV_COMPOSE,
     PKG_PROD,
-    PKG_STAGING,
 )
 
 ENVS = ["dev", "staging", "prod"]
@@ -302,18 +295,18 @@ migration_database = migration_settings.temp
 
 class DevDatabaseSettings(BaseDatabaseSettings):
     def start(self):
-        from .typer_utils import run_steps, sh
+        from .typer_utils import sh
 
         sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
         self.ping(verbose=True)
 
     def down(self):
-        from .typer_utils import run_steps, sh
+        from .typer_utils import sh
 
         sh(f"docker compose -f {ENV_DEV_COMPOSE} down")
 
     def destroy(self):
-        from .typer_utils import run_steps, sh
+        from .typer_utils import sh
 
         sh(f"docker compose -f {ENV_DEV_COMPOSE} down -v")
 

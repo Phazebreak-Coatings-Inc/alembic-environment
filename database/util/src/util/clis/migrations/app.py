@@ -7,7 +7,6 @@ import typer
 from ...utils import (
     DryRun,
     EnvArg,
-    VerboseOption,
     alembic_heads,
     alembic_test,
     alembic_env,

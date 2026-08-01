@@ -6,9 +6,7 @@ from ...utils import (
     TABLES_SQL,
     SQLGenerator,
     SQLReverseGenerator,
-    ruff_format,
     repair_model_init,
-    sh,
     DryRun,
     e,
 )
@@ -51,7 +49,7 @@ def repair(dry_run: DryRun = False):
     typer.secho(f"Attempting to repair {INIT_MODELS} file")
     repair_model_init(dry_run=dry_run)
     if not dry_run:
-        typer.secho(f"Successfully wrote new imports.")
+        typer.secho("Successfully wrote new imports.")
 
 
 @app.command(help="CICD pipeline for generating and reverse generating models.")

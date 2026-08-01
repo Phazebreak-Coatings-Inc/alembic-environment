@@ -1,5 +1,4 @@
 import typer
-import traceback
 import os
 from typing import Annotated, Callable
 import functools
@@ -52,7 +51,7 @@ def e(func):
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except (typer.Exit, typer.Abort):
+        except typer.Exit, typer.Abort:
             raise
         except Exception as exc:
             typer.secho(str(exc), err=True, fg=typer.colors.RED)
