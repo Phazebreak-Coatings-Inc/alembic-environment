@@ -46,18 +46,17 @@ def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProc
 
 
 def e(func):
-    """Wraps in try except for with exit codes: 0 or 1"""
+    """Wraps in try/except, mapping unhandled errors to exit code 1."""
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:
-            func(*args, **kwargs)
-        except typer.Exit, typer.Abort:
+            return func(*args, **kwargs)
+        except (typer.Exit, typer.Abort):
             raise
-        except Exception as e:
-            typer.secho(f"{str(e)}", err=True, fg=typer.colors.RED)
+        except Exception as exc:
+            typer.secho(str(exc), err=True, fg=typer.colors.RED)
             raise typer.Exit(1)
-        raise typer.Exit(0)
 
     return wrapper
 
