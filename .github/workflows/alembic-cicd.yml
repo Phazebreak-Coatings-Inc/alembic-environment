@@ -8,8 +8,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  model-generation:
-    name: Model Generation
+  generate:
+    name: Generate
     if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -22,21 +22,6 @@ jobs:
       - run: uv python install
       - run: uv sync
       - run: uv run python -m models cicd
-
-  migrations:
-    name: Migration
-    needs: model-generation
-    if: github.ref != 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-      - run: uv python install
-      - run: uv sync
       - run: uv run python -m migrations cicd
 
   drift-check:
