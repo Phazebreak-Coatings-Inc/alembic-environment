@@ -44,6 +44,7 @@ def rg(dry_run: DryRun = False):
     r = SQLReverseGenerator(SQLModel.metadata)
     typer.secho(r.write(dry_run=dry_run))
 
+
 @app.command(help="Auto hook up imports.")
 @e
 def repair(dry_run: DryRun = False):
@@ -56,6 +57,7 @@ def repair(dry_run: DryRun = False):
 @app.command(help="CICD pipeline for generating and reverse generating models.")
 def cicd():
     from ...utils import git_bot
+
     with git_bot("chore: generate and reverse-generate from tables.sql", PKG_MODELS):
         g()
         rg()
