@@ -10,6 +10,7 @@ concurrency:
 jobs:
   model-generation:
     name: Model Generation
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -39,6 +40,7 @@ jobs:
 
   model-generation:
     name: Model Generation
+    if: github.ref != 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
