@@ -3,6 +3,7 @@ CREATE TABLE users (
   username VARCHAR(50) NOT NULL UNIQUE,
   email VARCHAR(100),
   password VARCHAR(100),
-  join_date DATE DEFAULT CURRENT_TIMESTAMP
+  join_date DATE DEFAULT CURRENT_TIMESTAMP,
+  foobar VARCHAR(100)
   -- created_by VARCHAR
 );
