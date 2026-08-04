@@ -23,15 +23,13 @@ DryRun = Annotated[
     bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
 ]
 
-
 def run_steps(fns: list[Callable] | None = None, label: str | None = None):
     fns = fns or []
-    with typer.progressbar(
-        fns, label=label, width=min(len(fns), 34), show_percent=True
-    ) as s:
-        for fn in s:
-            fn()
-
+    total = len(fns)
+    for i, fn in enumerate(fns, 1):
+        typer.secho(f"{label or 'Running steps'} [{i}/{total}]", fg=typer.colors.CYAN)
+        fn()
+    typer.secho(f"Completed {total} steps successfully.", fg=typer.colors.GREEN)
 
 def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProcess:
     if silent:

@@ -9,11 +9,11 @@ services:
       POSTGRES_PASSWORD: dev_password
       POSTGRES_DB: dev_db
     volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
+      - alembic_environment_dev:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dev_user -d dev_db"]
       interval: 5s
       timeout: 3s
       retries: 5
 volumes:
-  postgres_dev_data:
+  alembic_environment_dev:

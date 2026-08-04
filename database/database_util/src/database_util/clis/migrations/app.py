@@ -40,7 +40,8 @@ app = typer.Typer()
 )
 @e
 @validate_call
-def up():
+def up(
+):
     return ms.up()
 
 
@@ -83,7 +84,7 @@ def apply(
 ):
     if interactive:
         typer.confirm(f"Upgrade {env} to {target}?", abort=True)
-    alembic("upgrade target", env)
+    alembic(f"upgrade {target}", env)
 
 
 @app.command(help="Check if the database needs to be migrated.")

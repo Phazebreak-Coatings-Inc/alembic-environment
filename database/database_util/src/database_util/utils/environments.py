@@ -67,46 +67,63 @@ class BaseDatabaseSettings(ABC, BaseSettings):
     def engine(self):
         return create_engine(self.database_url, connect_args={"connect_timeout": 3})
 
-    def ping(self, attempts: int = 1, delay: float = 0.5, verbose=False) -> None:
-        start = time.perf_counter()
+    @abstractmethod
+    def get_environment_str(self) -> str: ...
+
+    def ping(self, attempts: int = 1, delay: float = 0.5, verbose: bool = False) -> None:
+        engine = self.engine
+        started = time.perf_counter()
         last: Exception | None = None
-        for i in range(attempts):
-            try:
-                with self.engine.connect() as conn:
-                    conn.execute(text("SELECT 1"))
-                if verbose:
-                    typer.secho(
-                        f"Pinged {self.database_name} "
-                        f"in {(time.perf_counter() - start) * 1000:.1f}ms"
-                    )
-                return
-            except Exception as e:
-                last = e
-                time.sleep(delay)
-                if verbose and attempts > 1:
-                    typer.secho(
-                        f"\nWaiting for {self.database_name} ({i + 1}/{attempts})..."
-                    )
+        try:
+            for i in range(attempts):
+                try:
+                    with engine.connect() as conn:
+                        conn.execute(text("SELECT 1"))
+                    if verbose:
+                        typer.secho(
+                            f"{self.database_name} ready in "
+                            f"{(time.perf_counter() - started) * 1000:.0f}ms"
+                        )
+                    return
+                except Exception as e:
+                    last = e
+                    if i + 1 >= attempts:
+                        break
+                    if verbose:
+                        typer.secho(
+                            f"Waiting for {self.database_name} ({i + 1}/{attempts})..."
+                        )
+                    time.sleep(delay)
+        finally:
+            engine.dispose()
+
         raise RuntimeError(
             f"Database connection to {self.database_name} failed after "
             f"{attempts} attempt(s): {last}"
         ) from last
 
-    def up(self) -> None:
+    def up(self, startup: bool = False) -> None:
         from .typer_utils import run_steps
 
-        self.start()
-        run_steps(fns=self.up_steps(), label="Running startup steps...")
+        try:
+            self.ping()
+            typer.secho(f"Database '{self.get_environment_str()}' is already up.", fg=typer.colors.GREEN)
+        except Exception:
+            self.start()
+            self.ping(attempts=60, verbose=True)
+            startup = True
+           
+        if startup:
+            run_steps(fns=self.up_steps(), label="Running startup steps...")
+
 
     @abstractmethod
     def start(self) -> None: ...
 
     def up_steps(self) -> list[Callable]:
         return [
-            self.ping,
-            lambda: typer.secho(
-                f"\nModify {self.__class__.__name__}.up_steps to run fns after startup."
-            ),
+            self.upgrade,
+            self.seed,
         ]
 
     @abstractmethod
@@ -117,6 +134,19 @@ class BaseDatabaseSettings(ABC, BaseSettings):
 
     @abstractmethod
     def test(self) -> bool: ...
+
+    def upgrade(self):
+        from database_util.clis.migrations.app import apply
+        apply(self.get_environment_str(), interactive=False) #type: ignore
+
+    def seed(self):
+        from database_util.clis.migrations.app import seed
+        if (env := self.get_environment_str()) in ["dev", "prod"]:
+            return seed(env) #type: ignore
+        if env == "staging":
+            return self.stage()
+
+    def stage(self): ...
 
     @contextmanager
     def temp(self):
@@ -283,9 +313,12 @@ class MigrationSettings(BaseDatabaseSettings):
     def test(self):  # Can't really test it no? Lol
         return True
 
+    def get_environment_str(self) -> str:
+        return 'mig'
+
 
 migration_settings = MigrationSettings(
-    database_host="localhost",
+    database_host="127.0.0.1",
     database_port=5431,
     database_username="migrations",
     database_password="migrations_password",
@@ -299,7 +332,6 @@ class DevDatabaseSettings(BaseDatabaseSettings):
         from .typer_utils import sh
 
         sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
-        self.ping(verbose=True)
 
     def down(self):
         from .typer_utils import sh
@@ -315,9 +347,12 @@ class DevDatabaseSettings(BaseDatabaseSettings):
         with self.temp():
             return True
 
+    def get_environment_str(self) -> str:
+        return 'dev'
+
 
 dev_settings = DevDatabaseSettings(
-    database_host="localhost",
+    database_host="127.0.0.1",
     database_port=5432,
     database_name="dev_db",
     database_username="dev_user",
@@ -346,6 +381,9 @@ class StagingDatabaseSettings(TerraformedDatabaseSettings[StagingOutputs]):
         self.database_username = self.get_output("staging_username")
         self.database_password = self.get_output("staging_password")
 
+    def get_environment_str(self) -> str:
+        return 'staging'
+
 
 StagingDatabaseSettings.set_cwd(PKG_PROD)
 
@@ -367,6 +405,9 @@ class ProdDatabaseSettings(TerraformedDatabaseSettings[ProdOutputs]):
         self.database_name = self.get_output("prod_name")
         self.database_username = self.get_output("prod_username")
         self.database_password = self.get_output("prod_password")
+
+    def get_environment_str(self) -> str:
+        return "prod"
 
 
 ProdDatabaseSettings.set_cwd(PKG_PROD)

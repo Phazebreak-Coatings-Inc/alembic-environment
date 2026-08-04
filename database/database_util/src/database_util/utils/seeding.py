@@ -21,7 +21,7 @@ SeedFunction = Callable[[Session], None]
 SeedRegistry = dict[DatabaseEnvironment, list[SeedFunction]]
 RequiresRegistry = dict[SeedFunction, list[SeedFunction]]
 SeedableDatabaseEnvironment = Annotated[
-    Literal["dev", "staging", "prod"], BeforeValidator(is_valid_seedable_env)
+    Literal["dev", "prod"], BeforeValidator(is_valid_seedable_env)
 ]
 SeedableEnvArg = Annotated[
     SeedableDatabaseEnvironment,
@@ -135,8 +135,8 @@ def execute_seeds(
         fns = [make_step(fn) for fn in sort_seeds(env)]
 
         if len(fns) == 0:
-            typer.secho(f"Found 0 seeds for environment '{env}'...", fg=typer.colors.RED)
-            raise typer.Abort()
+            typer.secho(f"Found 0 seeds for environment '{env}'...", fg=typer.colors.YELLOW)
+            return
 
         if confirm and not dry_run:
             typer.confirm(
