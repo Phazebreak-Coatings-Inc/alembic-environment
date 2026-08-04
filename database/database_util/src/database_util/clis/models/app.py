@@ -20,9 +20,9 @@ app = Typer(pretty_exceptions_show_locals=False)
 def g(
     dry_run: DryRun = False,
 ):
-    typer.secho(f"Attempting to generate models from {TABLES_SQL.name}")
+    typer.secho(f"Attempting to generate models from {TABLES_SQL.name}", fg=typer.colors.YELLOW)
     s = SQLGenerator()
-    typer.secho(f"\nRendered {s.len_models} model(s) from {TABLES_SQL.name}")
+    typer.secho(f"\nRendered {s.len_models} model(s) from {TABLES_SQL.name}", fg=typer.colors.GREEN)
     if not dry_run:
         s.write_files()
         repair()
@@ -37,19 +37,20 @@ def rg(dry_run: DryRun = False):
     from sqlmodel import SQLModel
 
     typer.secho(
-        f"Attempting to reverse generate mixin fields back to {TABLES_SQL.name}"
+        f"Attempting to reverse generate mixin fields back to {TABLES_SQL.name}",
+        fg=typer.colors.YELLOW
     )
     r = SQLReverseGenerator(SQLModel.metadata)
-    typer.secho(r.write(dry_run=dry_run))
+    typer.secho(r.write(dry_run=dry_run), fg=typer.colors.GREEN)
 
 
 @app.command(help="Auto hook up imports.")
 @e
 def repair(dry_run: DryRun = False):
-    typer.secho(f"Attempting to repair {INIT_MODELS} file")
+    typer.secho(f"Attempting to repair {INIT_MODELS} file", fg=typer.colors.YELLOW)
     repair_model_init(dry_run=dry_run)
     if not dry_run:
-        typer.secho("Successfully wrote new imports.")
+        typer.secho("Successfully wrote new imports.", fg=typer.colors.GREEN)
 
 
 @app.command(help="CICD pipeline for generating and reverse generating models.")

@@ -1,7 +1,7 @@
 import pytest
 from pytest_alembic.config import Config
 
-from util.utils.environments import migration_settings
+from database_util.utils import migration_settings
 
 
 @pytest.fixture

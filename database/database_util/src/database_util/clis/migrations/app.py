@@ -134,7 +134,7 @@ def seed(
 @e
 @validate_call
 def backfill(
-    rev: RevisionOption = latest_rev(),
+    rev: RevisionOption | None = None,
     message: Annotated[
         str | None,
         typer.Option("-m", "--message", help="Create a new revision for a backfill."),
@@ -145,7 +145,8 @@ def backfill(
 
     if message:
         sh(f'alembic revision -m "{message}"', check=True)
-
+    
+    rev = rev or latest_rev()
     write_backfill_stub(rev)
 
 @app.command(
