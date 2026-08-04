@@ -23,6 +23,12 @@ from ...utils import (
     execute_seeds,
     generate_seed_file,
     e,
+    SeedableEnvArg,
+    Revision,
+    RevisionOption,
+    BackfillException,
+    latest_rev,
+    write_backfill_stub
 )
 
 
@@ -41,26 +47,6 @@ def up():
 @app.command(help="Shut down the migrations database.")
 def down():
     return ms.down()
-
-
-@app.command(help="Seed the database with anything decorated with 'migrations.seed'.")
-@e
-def seed(
-    env: EnvArg,
-    n: Annotated[
-        str | None,
-        typer.Option(
-            "--generate",
-            "-g",
-            help=f"Generate a seed file with '--g {{ name }}' It will arrive in ...{Path(*DIR_SEEDS.parts[-4:])}. The environment variable is for specifying in what environment the seed should run.",
-        ),
-    ] = None,
-    d: DryRun = False,
-):
-    if n:
-        generate_seed_file(env=env, name=n, dry_run=d)
-        return
-    execute_seeds(env=env, dry_run=d, confirm=True)
 
 
 @app.command(help="Test the alembic revisions generated.")
@@ -124,9 +110,46 @@ def init():
         )
         alembic_test(throw=True)
 
+@app.command(help="Seed the database with anything decorated with 'migrations.seed'.")
+@e
+@validate_call
+def seed(
+    env: SeedableEnvArg,
+    n: Annotated[
+        str | None,
+        typer.Option(
+            "--generate",
+            "-g",
+            help=f"Generate a seed file with '--g {{ name }}' It will arrive in ...{Path(*DIR_SEEDS.parts[-4:])}. The environment variable is for specifying in what environment the seed should run.",
+        ),
+    ] = None,
+    d: DryRun = False,
+):
+    if n:
+        generate_seed_file(env=env, name=n, dry_run=d)
+        return
+    execute_seeds(env=env, dry_run=d, confirm=True)
+
+@app.command(help="Create a backfill stub. Defaults to the latest revision.")
+@e
+@validate_call
+def backfill(
+    rev: RevisionOption = latest_rev(),
+    message: Annotated[
+        str | None,
+        typer.Option("-m", "--message", help="Create a new revision for a backfill."),
+    ] = None,
+):
+    if rev and message:
+        raise BackfillException("Pass --for or --message, not both.")
+
+    if message:
+        sh(f'alembic revision -m "{message}"', check=True)
+
+    p = write_backfill_stub(rev)
 
 @app.command(
-    help="Run a autonomous CICD workflow that checks for drift, tests, and commits to the current branch if check is not passed with -c or -c"
+    help="Run a autonomous CICD workflow that checks for drift, tests, and commits to the current branch"
 )
 @e
 def cicd(
@@ -150,12 +173,9 @@ def cicd(
             raise typer.Exit(1)
 
         with git_bot("chore: autogenerate alembic revision", DIR_VERSIONS):
-            if len(alembic_heads()) > 1:
-                sh('alembic merge -m "merge heads" heads')
-            sh("alembic upgrade head", check=True)
-            sh('alembic revision --autogenerate -m "auto"', check=True)
-            typer.secho("Generated and committed revision", fg=typer.colors.GREEN)
+            alembic_migrate()
             alembic_test(throw=True)
+            typer.secho("Generated revision", fg=typer.colors.GREEN)
 
 
 @app.command(

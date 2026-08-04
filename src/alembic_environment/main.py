@@ -16,7 +16,7 @@ COPIER_REPO = "gh:Phazebreak-Coatings-Inc/alembic-environment"
 ANSWERS_FILE = ".alembic-environment-answers.yml"
 
 WORKSPACE = {
-    "util": "database/util",
+    "database_util": "database/database_util",
     "models": "database/models",
     "migrations": "database/migrations",
     "environments": "database/environments",

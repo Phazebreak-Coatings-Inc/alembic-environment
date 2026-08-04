@@ -17,6 +17,7 @@ from abc import abstractmethod, ABC
 from pathlib import Path
 from alembic.config import Config
 from alembic.script import ScriptDirectory
+from alembic.util.exc import CommandError
 from pydantic import (
     BeforeValidator,
     validate_call,
@@ -396,6 +397,30 @@ class AlembicSettings(BaseSettings):
 alembic_settings = AlembicSettings()
 alembic_env: DatabaseEnvironment = cast(DatabaseEnvironment, alembic_settings.env)
 
+class RevisionError(Exception): ...
+
+def script_dir() -> ScriptDirectory:
+    return ScriptDirectory.from_config(Config("alembic.ini"))
 
 def alembic_heads() -> list[str]:
-    return list(ScriptDirectory.from_config(Config("alembic.ini")).get_heads())
+    return list(script_dir().get_heads())
+
+def validate_revs(revs: list[str]) -> list[str]:
+    try:
+        return [s.revision for s in script_dir().get_revisions(tuple(revs))]
+    except CommandError as e:
+        raise RevisionError(f"unknown revision(s) {revs}: {e}") from e
+
+def is_valid_rev(rev: str) -> str:
+    return validate_revs([rev])[0]
+
+Revision = Annotated[str, BeforeValidator(is_valid_rev)]
+
+def latest_rev() -> str:
+    """The single head revision id."""
+    heads = alembic_heads()
+    if not heads:
+        raise RevisionError("No revisions exist yet - run 'migrations init' first.")
+    if len(heads) > 1:
+        raise RevisionError(f"History has branched across {len(heads)} heads: {heads}")
+    return heads[0]

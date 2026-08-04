@@ -1,4 +1,5 @@
 import ast
+import typer
 from .paths import PKG_MODELS, INIT_MODELS
 from .misc import ruff_format
 from pathlib import Path
@@ -28,4 +29,4 @@ def repair_model_init(dry_run: bool = False):
     if not dry_run:
         INIT_MODELS.write_text(ruff_format(body))
     if dry_run:
-        print(f"Would have generated: \n\n {body}")
+        typer.secho(f"Would have generated: \n\n {body}", fg=typer.colors.YELLOW)

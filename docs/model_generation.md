@@ -135,16 +135,6 @@ We can run our generate command again, then a migration:
 
 ```uv run python -m migrations migrate```
 
-Alembic has detected the change, and is generating a new migration:
-
-```
-INFO  [alembic.ddl.postgresql] Detected sequence named 'users_user_id_seq' as owned by integer column 'users(user_id)', assuming SERIAL and omitting
-INFO  [alembic.autogenerate.compare.tables] Detected added column 'users.password'
-Generating C:\Users\miles\PycharmProjects\alembic-environment\migrations\src\migrations\versions\20260609_74412bbb5201_auto.py ...  done
-Running post write hook 'ruff' ...
-Found 1 error (1 fixed, 0 remaining). done
-```
-
 As you will see, it has also attached it to the generated python objects:
 
 ```python

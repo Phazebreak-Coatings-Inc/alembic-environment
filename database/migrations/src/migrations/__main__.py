@@ -1,3 +1,3 @@
-from util import migrations_cli
+from database_util import migrations_cli
 
 migrations_cli()

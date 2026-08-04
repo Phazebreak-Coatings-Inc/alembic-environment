@@ -4,16 +4,20 @@ from typing import Annotated, Callable
 import functools
 import subprocess
 from pathlib import Path
-from .environments import DatabaseEnvironment, alembic_env
+from .environments import DatabaseEnvironment, alembic_env, Revision
 from pydantic import validate_call, BeforeValidator
 from .paths import TESTS_MIGRATIONS
 
+RevisionOption = Annotated[
+    Revision, 
+    typer.Option("-r", "--revision", help="Which alembic revision to target.")
+]
 VerboseOption = Annotated[
     bool, typer.Option("-v", "--verbose", help="Run in verbose mode.")
 ]
 EnvArg = Annotated[
     DatabaseEnvironment,
-    typer.Argument(help="Choose which environment to seed for."),
+    typer.Argument(help="Which database environment to target."),
 ]
 DryRun = Annotated[
     bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")

@@ -37,7 +37,6 @@ PS C:\Users\miles\PycharmProjects\alembic-environmen
 t>
 ```
 
-
 ### Setting Up ```prod``` and ```staging```
 
 First, we'll want to create a Personal Access Token for Digital Ocean. Please visit the following documentation for steps to retrieve it: ```https://docs.digitalocean.com/reference/api/create-personal-access-token/```.

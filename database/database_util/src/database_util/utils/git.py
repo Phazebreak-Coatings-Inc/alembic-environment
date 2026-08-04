@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from .typer_utils import sh
 from pathlib import Path
+import typer
 
 GIT_BOT_NAME = "github-actions[bot]"
 GIT_BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
@@ -11,7 +12,7 @@ def git_bot(message: str, path: Path = Path(".")):
     yield
     sh(f'git add -- "{path}"', check=True)
     if sh("git diff --cached --quiet", check=False).returncode == 0:
-        print("[git-bot]: nothing to commit.")
+        typer.secho("[git-bot]: nothing to commit.", fg=typer.colors.YELLOW)
         return
     sh(
         f'git -c user.name="{GIT_BOT_NAME}" -c user.email="{GIT_BOT_EMAIL}" '
