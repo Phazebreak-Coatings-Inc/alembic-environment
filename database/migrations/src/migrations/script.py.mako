@@ -10,6 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 import sqlmodel
+from database_utils.utils import run_backfill
 ${imports if imports else ""}
 
 revision: str = ${repr(up_revision)}
@@ -19,6 +20,7 @@ depends_on: Union[str, Sequence[str], None] = ${repr(depends_on)}
 
 def upgrade() -> None:
     ${upgrades if upgrades else "pass"}
+    run_backfill(revision)
 
 def downgrade() -> None:
     ${downgrades if downgrades else "pass"}

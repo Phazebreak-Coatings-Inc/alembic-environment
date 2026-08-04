@@ -146,7 +146,7 @@ def backfill(
     if message:
         sh(f'alembic revision -m "{message}"', check=True)
 
-    p = write_backfill_stub(rev)
+    write_backfill_stub(rev)
 
 @app.command(
     help="Run a autonomous CICD workflow that checks for drift, tests, and commits to the current branch"

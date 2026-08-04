@@ -48,10 +48,12 @@ def backfill(rev: Revision):
 
 
 def get_backfills(rev: str) -> list[BackfillFunction]:
-    """Import the revision's backfill module (registering it), then return its fns."""
+    name = f"migrations.backfills.{rev}"
     try:
-        importlib.import_module(f"migrations.backfills.{rev}")
-    except ModuleNotFoundError:
+        importlib.import_module(name)
+    except ModuleNotFoundError as exc:
+        if exc.name != name:
+            raise
         return []
     return BACKFILLS[rev]
 
