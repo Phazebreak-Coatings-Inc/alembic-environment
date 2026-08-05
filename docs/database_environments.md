@@ -50,7 +50,7 @@ TF_VAR_do_token="{{Your digital ocean token here}}"
 Once you have listed your token under ```TF_VAR_do_token```, go ahead and terraform your database environments using the following command:
 
 ```
-uv run python -m environments up prod
+uv run --env-file .env python -m environments up prod
 ```
 
 

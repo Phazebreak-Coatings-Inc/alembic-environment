@@ -16,14 +16,18 @@ def model_exports(init: Path) -> list[str]:
 
 
 def repair_model_init(dry_run: bool = False):
-    lines: list[str] = []
-    all_names: list[str] = []
+    lines: list[str] = [
+        "from .base_model import SQLModelBase"
+    ]
+    all_names: list[str] = ["SQLModelBase"]
     for d in sorted(p for p in PKG_MODELS.iterdir() if (p / "__init__.py").exists()):
         names = model_exports(d / "__init__.py")
         if not names:
             continue
         lines.append(f"from .{d.name} import " + ", ".join(names))
         all_names += names
+
+
     body = "\n".join(lines)
     body += "\n\n__all__ = [" + ", ".join(f'"{n}"' for n in all_names) + "]\n"
     if not dry_run:

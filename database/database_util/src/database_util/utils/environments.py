@@ -33,7 +33,7 @@ from .paths import (
     PKG_PROD,
 )
 
-ENVS = ["dev", "staging", "prod"]
+ENVS = ["dev", "staging", "prod", "mig"]
 
 
 def is_valid_database_env(env: str) -> "DatabaseEnvironment":
@@ -45,7 +45,7 @@ def is_valid_database_env(env: str) -> "DatabaseEnvironment":
 
 
 DatabaseEnvironment = Annotated[
-    Literal["dev", "staging", "prod"], BeforeValidator(is_valid_database_env)
+    Literal["dev", "staging", "prod", "mig"], BeforeValidator(is_valid_database_env)
 ]
 
 
@@ -82,7 +82,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
                     if verbose:
                         typer.secho(
                             f"{self.database_name} ready in "
-                            f"{(time.perf_counter() - started) * 1000:.0f}ms"
+                            f"{(time.perf_counter() - started) * 1000:.0f}ms", fg=typer.colors.GREEN
                         )
                     return
                 except Exception as e:
@@ -414,7 +414,7 @@ ProdDatabaseSettings.set_cwd(PKG_PROD)
 
 prod_settings = ProdDatabaseSettings()
 
-DatabaseSetting = DevDatabaseSettings | StagingDatabaseSettings | ProdDatabaseSettings
+DatabaseSetting = DevDatabaseSettings | StagingDatabaseSettings | ProdDatabaseSettings | MigrationSettings
 
 
 @validate_call
@@ -427,6 +427,8 @@ def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
             s = staging_settings
         case "prod":
             s = prod_settings
+        case "mig":
+            s = migration_settings
     return s
 
 

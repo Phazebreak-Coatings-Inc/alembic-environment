@@ -38,11 +38,7 @@ Attempting to repair C:\Users\miles\PycharmProjects\alembic-environment\database
 Successfully wrote new imports.
 ```
 
-Make sure to generate a revision after: 
-
-```sh
-uv run python -m migrations migrate
-```
+Our revision will be generated automatically.
 
 This is our revision in ```./database/migrations/src/migrations/versions```:
 
@@ -79,6 +75,7 @@ The output in ```./database/models/src/models``` models folder should look like 
 ```
 |   __init__.py
 |   __main__.py
+|   base_model.py
 |
 +---users
 |   |   base.py
@@ -129,11 +126,10 @@ CREATE TABLE users (
 );
 ```
 
-We can run our generate command again, then a migration:
+We can run our generate command again: 
 
 ```uv run python -m models g```
 
-```uv run python -m migrations migrate```
 
 As you will see, it has also attached it to the generated python objects:
 
@@ -158,10 +154,11 @@ class UsersBase(SQLModel):
 However, it has not changed our ```model.py```:
 
 ```python
+from ..base_model import SQLModelBase
 from .base import UsersBase
 
 
-class Users(UsersBase, table=True):
+class Users(SQLModelBase, UsersBase, table=True):
     pass  # add methods here
 ```
 
@@ -176,6 +173,7 @@ Now that we've established the ability to generate SQL into python, what happens
 Let's say we want to create a mixin that adds a basic field.:
 
 ```python
+from ..base_model import SQLModelBase
 from .base import UsersBase
 from abc import ABC
 from sqlmodel import SQLModel, Field
@@ -190,7 +188,7 @@ class CreateMixin(SQLModel, ABC):
         return cls(created_by=username, **kwargs)
 
 
-class Users(UsersBase, CreateMixin, table=True):
+class Users(SQLModelBase, UsersBase, CreateMixin, table=True):
     pass  # add methods here
 ```
 
@@ -202,13 +200,12 @@ Let's go ahead and reverse generate to accomodate our models' extra fields decla
 
 ```uv run python -m models rg```
 
-We get the following output:
+We get the following output in ```tables.sql```:
 
-```
-Attempting to reverse generate mixin fields back to tables.sql
+```sql
 CREATE TABLE users (
   user_id INT PRIMARY KEY,
-  username VARCHAR(50) NOT NULL UNIQUE,    
+  username VARCHAR(50) NOT NULL UNIQUE,
   email VARCHAR(100),
   password VARCHAR(100),
   join_date DATE DEFAULT CURRENT_TIMESTAMP 
@@ -216,8 +213,10 @@ CREATE TABLE users (
 );
 ```
 
+It will also run a migration automatically.
+
 As you can see, we've programmatically added a comment showing that this field came from python, without causing another run of ```uv run python -m migrations g``` to redeclare it in ```base.py```.
 
-Finally, we'll run another migration:
+### Editing the Base Model
 
-```uv run python -m migrations migrate```
+Let's say we want to extend all of our models with the create Mixin, not just one. You may have noticed the ```SQLModelBase``` class that

@@ -27,7 +27,7 @@ def g(
         s.write_files()
         repair()
         migrate()
-        typer.secho("Wrote files successfully.")
+        typer.secho("Wrote files successfully.", fg=typer.colors.GREEN)
 
 
 @app.command(help=f"Merge ORM-only columns back into {TABLES_SQL} as comments.")
@@ -41,8 +41,10 @@ def rg(dry_run: DryRun = False):
         fg=typer.colors.YELLOW
     )
     r = SQLReverseGenerator(SQLModel.metadata)
-    typer.secho(r.write(dry_run=dry_run), fg=typer.colors.GREEN)
-
+    if not dry_run:
+        r.write(dry_run=dry_run)
+        migrate()
+        typer.secho("Wrote files successfully", fg=typer.colors.GREEN)
 
 @app.command(help="Auto hook up imports.")
 @e

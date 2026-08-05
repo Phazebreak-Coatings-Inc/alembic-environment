@@ -41,8 +41,9 @@ class Model:
 
     def class_to_model(self) -> str:
         return (
+            f"from ..base_model import SQLModelBase\n"
             f"from .base import {self.name}Base\n\n\n"
-            f"class {self.name}({self.name}Base, table=True):\n"
+            f"class {self.name}(SQLModelBase, {self.name}Base, table=True):\n"
             f"    pass  # add methods here\n"
         )
 
