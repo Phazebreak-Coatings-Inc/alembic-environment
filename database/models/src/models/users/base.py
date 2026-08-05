@@ -3,16 +3,17 @@ import datetime
 from sqlalchemy import (
     Column,
     Date,
+    ForeignKeyConstraint,
     Integer,
     PrimaryKeyConstraint,
     String,
     UniqueConstraint,
     text,
 )
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 
-from sqlmodel import SQLModel, Field, Relationship
+from sqlmodel import SQLModel, Field
 
 
 class UsersBase(SQLModel):

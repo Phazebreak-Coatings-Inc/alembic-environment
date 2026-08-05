@@ -296,6 +296,9 @@ class MigrationSettings(BaseDatabaseSettings):
             label="Starting Migrations Database",
         )
 
+    def up_steps(self) -> list[Callable]:
+        return []
+
     def down(self):
         from .typer_utils import run_steps, sh
 

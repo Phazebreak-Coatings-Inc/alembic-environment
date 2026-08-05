@@ -29,6 +29,9 @@ def repair_model_init(dry_run: bool = False):
 
 
     body = "\n".join(lines)
+    rebuilds = [n for n in all_names if not n.endswith("Base")]
+    if rebuilds:
+        body += "\n\n" + "\n".join(f"{n}.model_rebuild()" for n in rebuilds)
     body += "\n\n__all__ = [" + ", ".join(f'"{n}"' for n in all_names) + "]\n"
     if not dry_run:
         INIT_MODELS.write_text(ruff_format(body))

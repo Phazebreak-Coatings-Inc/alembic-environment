@@ -18,7 +18,7 @@ from . import (
     ruff_format,
 )
 
-FileKind = Literal["base", "model"]
+FileKind = Literal["base", "mixin", "model"]
 
 
 class Model:
@@ -29,23 +29,78 @@ class Model:
     def name(self) -> str:
         return self.cls.name
 
+    def get_path(self, file: FileKind):
+        return PKG_MODELS / inflection.underscore(self.name) / f"{file}.py"
+
+    @property
+    def fields(self) -> list[ast.AnnAssign]:
+        return [
+            s
+            for s in self.cls.body
+            if isinstance(s, ast.AnnAssign) and isinstance(s.target, ast.Name)
+        ]
+
+    @staticmethod
+    def is_relationship(field: ast.AnnAssign) -> bool:
+        return (
+            isinstance(field.value, ast.Call)
+            and isinstance(field.value.func, ast.Name)
+            and field.value.func.id == "Relationship"
+        )
+
+    @property
+    def relationships(self) -> list[ast.AnnAssign]:
+        return [f for f in self.fields if self.is_relationship(f)]
+
+    def relationship_targets(self, known: set[str]) -> set[str]:
+        out: set[str] = set()
+        for f in self.relationships:
+            for n in ast.walk(f.annotation):
+                if isinstance(n, ast.Name) and n.id in known:
+                    out.add(n.id)
+                elif isinstance(n, ast.Constant) and n.value in known:
+                    out.add(n.value)
+        return out - {self.name}
+
+    def class_to_mixin(self) -> str:
+        return (
+            f"class {self.name}Mixin:\n"
+            f'    """Hand-written methods for {self.name}. Never regenerated."""\n'
+        )
+
+    def class_to_model(self, known: set[str]) -> str:
+        lines = [
+            "from typing import TYPE_CHECKING, List, Optional",
+            "from sqlmodel import Relationship",
+            "from ..base_model import SQLModelBase",
+            f"from .base import {self.name}Base",
+            f"from .mixin import {self.name}Mixin",
+        ]
+        if targets := sorted(self.relationship_targets(known)):
+            lines += ["", "if TYPE_CHECKING:"] + [
+                f"    from ..{inflection.underscore(t)}.model import {t}"
+                for t in targets
+            ]
+        lines += [
+            "",
+            "",
+            f"class {self.name}({self.name}Mixin, SQLModelBase, {self.name}Base, table=True):",
+        ]
+        lines += [f"    {ast.unparse(r)}" for r in self.relationships] or ["    pass"]
+        return "\n".join(lines) + "\n"
+
     def class_to_base(self) -> str:
-        """SQLModel base: the same class without table=True"""
+        """SQLModel base: the same class without table=True or relationships."""
         node = copy.deepcopy(self.cls)
         node.name = f"{self.name}Base"
         node.keywords = [k for k in node.keywords if k.arg != "table"]
         node.decorator_list = []
-        return "from sqlmodel import SQLModel, Field, Relationship\n\n\n" + ast.unparse(
-            node
-        )
-
-    def class_to_model(self) -> str:
-        return (
-            f"from ..base_model import SQLModelBase\n"
-            f"from .base import {self.name}Base\n\n\n"
-            f"class {self.name}(SQLModelBase, {self.name}Base, table=True):\n"
-            f"    pass  # add methods here\n"
-        )
+        node.body = [
+            s
+            for s in node.body
+            if not (isinstance(s, ast.AnnAssign) and self.is_relationship(s))
+        ] or [ast.Pass()]
+        return "from sqlmodel import SQLModel, Field\n\n\n" + ast.unparse(node)
 
     def class_to_init(self) -> str:
         names = [
@@ -55,10 +110,6 @@ class Model:
         imports = f"from .base import {names[0]}\nfrom .model import {names[1]}\n"
         exports = "__all__ = [" + ", ".join(f'"{n}"' for n in names) + "]\n"
         return imports + "\n" + exports
-
-    def get_path(self, file: FileKind):
-        return PKG_MODELS / inflection.underscore(self.name) / f"{file}.py"
-
 
 class SQLGenerator:
     def __init__(self, dry_run: bool = False):
@@ -97,21 +148,21 @@ class SQLGenerator:
         )
 
     def write_files(self):
+        known = {m.name for m in self.models}
         for model in self.models:
             directory = model.get_path("model").parent
             directory.mkdir(parents=True, exist_ok=True)
 
-            sources: dict[FileKind, str] = {
-                "base": model.class_to_base(),
-            }
-            for kind, body in sources.items():
-                model.get_path(kind).write_text(
-                    ruff_format(f"{self.header}\n\n\n{body}")
-                )
+            model.get_path("base").write_text(
+                ruff_format(f"{self.header}\n\n\n{model.class_to_base()}")
+            )
+            model.get_path("model").write_text(
+                ruff_format(model.class_to_model(known))
+            )
 
-            model_path = model.get_path("model")
-            if not model_path.exists():
-                model_path.write_text(ruff_format(model.class_to_model()))
+            mixin_path = model.get_path("mixin")
+            if not mixin_path.exists():
+                mixin_path.write_text(ruff_format(model.class_to_mixin()))
 
             (directory / "__init__.py").write_text(ruff_format(model.class_to_init()))
 
