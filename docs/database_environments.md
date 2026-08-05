@@ -9,32 +9,30 @@ Run the following command to bring up your database:
 ```uv run python -m environments up dev```
 
 ```
-t> uv run python -m environments up dev
-C:\Users\miles\PycharmProjects\alembic-environment\d
-atabase
+PS C:\Users\miles\PycharmProjects\alembic-environment> uv run python 
+-m environments up dev
 [+] up 2/2
- ✔ Network dev_default              Created     0.1s
- ✔ Container postgres_dev_container Created     0.2s
-Pinged dev_db in 3174.4ms     
-Running startup steps...  [#-]   50%  00:00:03      
-Modify DevDatabaseSettings.up_steps to run fns after startup.
-Running startup steps...  [##]  100%
-PS C:\Users\miles\PycharmProjects\alembic-environmen
-t> 
+ ✔ Network dev_default              Created                      0.0s
+ ✔ Container postgres_dev_container Created                      0.1s
+Waiting for dev_db (1/60)...
+dev_db ready in 549ms
+Running startup steps... [1/2]
+Imported 'models' successfully.
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.       
+INFO  [alembic.runtime.migration] Will assume transactional DDL.     
+Running startup steps... [2/2]
+Found 0 seeds for environment 'dev'...
+Completed 2 steps successfully.
 ```
 
-You'll notice the process closes after pinging the database. No worries! It runs detached, so we don't have to babysit the command line.
+You'll notice the process closes after pinging the database and running ```alembic upgrade head```. No worries! It runs detached, so we don't have to babysit the command line.
 
 Let's go ahead and ping it after to make sure everything's okay:
 
 ```
-PS C:\Users\miles\PycharmProjects\alembic-environmen
-t> uv run python -m environments ping dev
-C:\Users\miles\PycharmProjects\alembic-environment\d
-atabase
-Pinged dev_db in 3139.5ms     
-PS C:\Users\miles\PycharmProjects\alembic-environmen
-t>
+PS C:\Users\miles\PycharmProjects\alembic-environment> uv run python 
+-m environments ping dev
+dev_db ready in 26ms
 ```
 
 ### Setting Up ```prod``` and ```staging```

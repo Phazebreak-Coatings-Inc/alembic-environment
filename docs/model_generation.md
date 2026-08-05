@@ -4,7 +4,7 @@ The models package in ```alembic-environment``` has the ability to create multip
 
 ##Declaring Your Table
 
-First, open the ```tables.sql``` file in ```./models/sql``` and declare a table.
+First, open the ```./database/models/tables.sql``` file and declare a table.
 
 ```sql
 CREATE TABLE users (
@@ -73,21 +73,25 @@ The output in ```./database/models/src/models``` models folder should look like 
 |
 +---users
 |   |   base.py
+|   |   mixin.py
 |   |   model.py
 |   |   __init__.py
 ```
 
-You can find the extendable model that you should use in production at ```.database/models/src/models/users/model.py```:
+You can find the extendable model at ```.database/models/src/models/users/mixin.py```. This file will not be overwritten by the ```g``` command.
 
 ```python
-from .base import UsersBase
-
-
-class Users(UsersBase, table=True):
-    pass  # add methods here
+class UsersMixin: ...
 ```
 
-It extends the generated model at ```./database/models/src/models/users/base.py```:
+This class is for extending the model generated at ```./database/models/src/models/users/model.py```, which is the one to be used in production:
+
+```python
+class Users(UsersMixin, SQLModelBase, UsersBase, table=True):
+    pass
+```
+
+This class inherits the actual base, which has all of the fields and such. Neither ```model.py``` or ```base.py``` are to be edited. Here is the base generated at ```./database/models/src/models/users/base.py```:
 
 ```python
 class UsersBase(SQLModel):
@@ -104,11 +108,11 @@ class UsersBase(SQLModel):
     )
 ```
 
-This pattern allows us to add convenience methods or mixins to ```Users``` while maintaining clean generation if something changes in ```tables.sql``` 
+This pattern allows us to add convenience methods or mixins to ```Users``` while maintaining clean generation if something changes in ```tables.sql```.
 
 ### Regenerating your SQL Table
 
-Now, let's add the password column to our table:
+Now, let's add a password column to our table:
 
 ```sql
 CREATE TABLE users (
@@ -125,7 +129,7 @@ We can run our generate command again:
 ```uv run python -m models g```
 
 
-As you will see, it has also attached it to the generated python objects:
+As you will see, it has also attached it to the generated python object in ```base.py```:
 
 ```python
 class UsersBase(SQLModel):
@@ -145,22 +149,17 @@ class UsersBase(SQLModel):
     )
 ```
 
-However, it has not changed our ```model.py```:
+However, it has not changed our ```mixin.py```:
 
 ```python
-from ..base_model import SQLModelBase
-from .base import UsersBase
-
-
-class Users(SQLModelBase, UsersBase, table=True):
-    pass  # add methods here
+class UsersMixin: ...
 ```
 
 This way, if you change your tables in SQL, you can still keep all the custom logic for your objects!
 
 ## Reverse Generation & ORM Extension
 
-Now that we've established the ability to generate SQL into python, what happens if our python mixin has extra fields that weren't declared in SQL? That's what ```migrations rg``` is for.
+Now that we've established the ability to generate SQL into python, what happens if our object in ```mixin.py``` has extra fields that weren't declared in SQL? That's what ```migrations rg``` is for.
 
 ### Extending Your Model
 
@@ -182,8 +181,7 @@ class CreateMixin(ABC):
         return cls(created_by=username, **kwargs) #type: ignore
 
 
-class Users(SQLModelBase, UsersBase, CreateMixin, table=True):
-    pass  # add methods here
+class UsersMixin(CreateMixin): ...
 ```
 
 Here, I've defined the ```CreateMixin``` that allows any number of models to have a ```created_by``` field without having to redeclare it multiple times in ```tables.sql```
@@ -213,7 +211,7 @@ As you can see, we've programmatically added a comment showing that this field c
 
 ### Extending the Base Model
 
-Let's say we want to extend all of our models with the create Mixin, not just one. You may have noticed the ```SQLModelBase``` class. This is a class that automatically patches in to each model you generate. That means we can add fields or methods to every model at once, easily.
+Let's say we want to extend all of our models with ```CreateMixin```, not just one. You may have noticed the ```SQLModelBase``` class. This is a class that automatically patches in to each model you generate. That means we can add fields or methods to every model at once, easily.
 
 
 For example, let's move the ```CreateMixin``` to ```./database/models/src/models/base_model.py``` and add a ```last_modified_by``` column:
@@ -278,3 +276,49 @@ CREATE TABLE orders (
 Now, let's generate the new model and then reverse generate:
 
 ```uv run python -m models g | uv run python -m rg```
+
+!!! Info
+
+    The important thing about keeping the ```model.py```/```base.py```/```mixin.py``` division, comes to foreign keys. On the above table, we added a reference to ```users``` via the ```user_id``` column on the ```orders``` table.
+
+    Our generation modified the ```model.py``` to access SQLModel's ```Relationship``` functionality. 
+
+    ```python
+    from typing import TYPE_CHECKING, List, Optional
+    from sqlmodel import Relationship
+    from ..base_model import SQLModelBase
+    from .base import OrdersBase
+    from .mixin import OrdersMixin
+
+    if TYPE_CHECKING:
+        from ..users.model import Users
+
+
+    class Orders(OrdersMixin, SQLModelBase, OrdersBase, table=True):
+        user: "Users" = Relationship(back_populates="orders")
+    ```
+
+    ```Relationship``` allows us to pass raw python objects as attributes to fill in foreign keys. Read about using ```Relationship``` [here](https://sqlmodel.tiangolo.com/tutorial/relationship-attributes/).
+
+The extra field registered on the second table as well, in ```tables.sql```:
+
+```sql
+CREATE TABLE users (
+  user_id INT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  email VARCHAR(100),
+  password VARCHAR(100),
+  join_date DATE DEFAULT CURRENT_TIMESTAMP
+  -- created_by VARCHAR
+  -- last_modified_by VARCHAR
+);
+
+CREATE TABLE orders (
+  order_id INT PRIMARY KEY,
+  title VARCHAR(500),
+  description VARCHAR(2000),
+  user_id INT NOT NULL REFERENCES users (user_id)
+  -- created_by VARCHAR
+  -- last_modified_by VARCHAR
+);
+```

@@ -12,5 +12,7 @@ CREATE TABLE orders (
   order_id INT PRIMARY KEY,
   title VARCHAR(500),
   description VARCHAR(2000),
-  user_id INT NOT NULL REFERENCES users(user_id)
+  user_id INT NOT NULL REFERENCES users (user_id)
+  -- created_by VARCHAR
+  -- last_modified_by VARCHAR
 );

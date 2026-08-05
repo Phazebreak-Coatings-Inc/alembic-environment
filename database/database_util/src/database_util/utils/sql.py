@@ -64,8 +64,7 @@ class Model:
 
     def class_to_mixin(self) -> str:
         return (
-            f"class {self.name}Mixin:\n"
-            f'    """Hand-written methods for {self.name}. Never regenerated."""\n'
+            f"class {self.name}Mixin: ...\n"
         )
 
     def class_to_model(self, known: set[str]) -> str:
