@@ -1,8 +1,8 @@
 """initial
 
-Revision ID: 8629164201c0
+Revision ID: 2a7d456bae34
 Revises: 
-Create Date: 2026-08-04 14:20:04.439231
+Create Date: 2026-08-06 12:24:06.697441
 
 """
 from typing import Sequence, Union
@@ -10,7 +10,7 @@ from typing import Sequence, Union
 from database_util.utils import run_backfill
 
 
-revision: str = '8629164201c0'
+revision: str = '2a7d456bae34'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
