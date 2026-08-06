@@ -15,11 +15,9 @@ BackfillRegistry = dict[str, list[BackfillFunction]]
 
 BACKFILLS: BackfillRegistry = defaultdict(list)
 
-BACKFILL_TEMPLATE = '''"""Backfill for revision {rev}."""
-
+BACKFILL_TEMPLATE = '''
 from sqlmodel import Session
-
-from database_utils.util import backfill
+from database_core import backfill
 
 
 @backfill("{rev}")

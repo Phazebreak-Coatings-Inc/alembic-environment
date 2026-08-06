@@ -34,9 +34,9 @@ SEEDS: SeedRegistry = defaultdict(list)
 REQUIRES: RequiresRegistry = {}
 SEED_TEMPLATE = """from models import *
 from sqlmodel import Session
-from migrations import seed, {env}
+from database_core import seed
 
-@seed([{env}])
+@seed(['{env}'])
 def {name}(session: Session) -> None:
     ...
 """

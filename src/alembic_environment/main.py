@@ -16,6 +16,7 @@ COPIER_REPO = "gh:Phazebreak-Coatings-Inc/alembic-environment"
 ANSWERS_FILE = ".alembic-environment-answers.yml"
 
 WORKSPACE = {
+    "database_core": "database/database_core",
     "database_util": "database/database_util",
     "models": "database/models",
     "migrations": "database/migrations",
@@ -147,5 +148,5 @@ def repair(
     sh(f"uv add --workspace {' '.join(WORKSPACE)}", cwd=p)
     sh(
         f"uv add --dev {' '.join(PACKAGES)}", cwd=p
-    )  # dev, if you want parity with your own repo
+    ) 
     sh("uv sync", cwd=p)

@@ -11,10 +11,11 @@ from ...utils import (
     e,
 )
 from ..migrations.app import migrate
+from .mcp import mcp
 
 app = Typer(pretty_exceptions_show_locals=False)
 
-
+@mcp.tool
 @app.command(help=f"Create models from {TABLES_SQL}")
 @e
 def g(
