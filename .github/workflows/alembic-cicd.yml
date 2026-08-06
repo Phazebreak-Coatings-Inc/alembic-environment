@@ -22,7 +22,6 @@ jobs:
       - run: uv python install
       - run: uv sync
       - run: uv run python -m models cicd
-      - run: uv run python -m migrations cicd
 
   drift-check:
     name: Drift Check (main)
@@ -35,4 +34,4 @@ jobs:
           enable-cache: true
       - run: uv python install
       - run: uv sync
-      - run: uv run python -m migrations cicd --no-commit
+      - run: uv run python -m migrations cicd --check
