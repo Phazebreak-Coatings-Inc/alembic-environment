@@ -1,5 +1,7 @@
 With ```alembic-environment```, prebuilt database environments are already available to you. The prebuilt ones are ```dev```, ```staging```, and ```prod```. ```dev``` is a locally run postgres container, whereas ```prod``` and ```staging``` are different databases on a Digital Ocean Cluster. Uses ```postgres 18```
 
+## Local environments
+
 ### Setting Up ```dev```
 
 To setup your ```dev``` environment. We don't need to pass any kind of environment variables, everything already comes out of the box.
@@ -33,6 +35,36 @@ Let's go ahead and ping it after to make sure everything's okay:
 PS C:\Users\miles\PycharmProjects\alembic-environment> uv run python 
 -m environments ping dev
 dev_db ready in 26ms
+```
+
+## Cloud Environments
+
+### Remote State
+
+Because our cloud environments use ```terraform```, we'll want to create a remote state for the resources we provision.
+
+You'll need to first go to [HCP Terraform](https://app.terraform.io/app), sign up, then create an organization, and finally, a workspace.
+
+After, read the documentation [here](https://developer.hashicorp.com/terraform/cloud-docs/users-teams-organizations/api-tokens) to create a token.
+
+Once signed up, run ```terraform login```:
+
+```
+Terraform will store the token in plain text in the following file   
+for use by subsequent commands:
+    C:\Users\miles\AppData\Roaming\terraform.d\credentials.tfrc.json 
+
+Token for app.terraform.io:
+  Enter a value:
+```
+
+Enter the token you just created.
+
+After, refer to the ```./.env.api``` for entering the following environment variables:
+
+```
+TF_CLOUD_ORGANIZATION="Your Hashicorp organization here"
+TF_WORKSPACE="Your project name here"
 ```
 
 ### Setting Up ```prod``` and ```staging```

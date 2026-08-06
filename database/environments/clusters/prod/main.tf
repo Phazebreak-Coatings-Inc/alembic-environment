@@ -5,7 +5,7 @@ provider "digitalocean" {
 } 
 
 module "cluster" {
-  source           = "../modules/do/postgres-cluster"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/clusters/modules/do/postgres-cluster?ref=main"
   name             = "alembic-environment"
   region           = "nyc1"
   postgres_version = "18"
@@ -14,14 +14,14 @@ module "cluster" {
 }
 
 module "prod_database" {
-  source     = "../modules/do/postgres-database"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/clusters/modules/do/postgres-database?ref=main"
   cluster_id = module.cluster.id
   db_name    = "prod"
   user_name  = "prod_user"
 }
 
 module "staging_database" {
-  source     = "../modules/do/postgres-database"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/clusters/modules/do/postgres-database?ref=main"
   cluster_id = module.cluster.id
   db_name    = "staging"
   user_name  = "staging_user"
