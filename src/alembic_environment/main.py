@@ -23,6 +23,12 @@ WORKSPACE = {
     "environments": "database/environments",
 }
 
+SCRIPTS = {
+    "models": "database_util.clis.models.app:app",
+    "migrations": "database_util.clis.migrations.app:app",
+    "environments": "database_util.clis.environments.app:app",
+}
+
 PACKAGES = [
     "alembic>=1.18.4",
     "copier>=9.15.1",
@@ -79,6 +85,16 @@ def add_workspaces(p: PyProject, workspace: dict[str, str]) -> PyProject:
             it = tomlkit.inline_table()
             it["workspace"] = True
             sources[name] = it
+    return p
+
+
+def add_scripts(p: PyProject, scripts: dict[str, str]) -> PyProject:
+    def sd(t, name):
+        return t.setdefault(name, tomlkit.table())
+
+    table = sd(sd(p, "project"), "scripts")
+    for name, target in scripts.items():  # name -> "module:attr"
+        table[name] = target
     return p
 
 
@@ -144,7 +160,7 @@ def repair(
                 err=True,
             )
             raise typer.Exit(1)
-    write_pyproject(p, add_workspaces(get_pyproject(p), WORKSPACE))
+    write_pyproject(p, add_scripts(add_workspaces(get_pyproject(p), WORKSPACE), SCRIPTS))
     sh(f"uv add --workspace {' '.join(WORKSPACE)}", cwd=p)
     sh(f"uv add --dev {' '.join(PACKAGES)}", cwd=p)
     sh("uv sync", cwd=p)
