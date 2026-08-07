@@ -45,12 +45,6 @@ PACKAGES = [
     "inflection>=0.5.1",
 ]
 
-SCRIPTS = {
-    "models": "database_util.clis.models.app:app",
-    "migrations": "database_util.clis.migrations.app:app",
-    "environments": "database_util.clis.environments.app:app",
-}
-
 
 def sh(cmd: str, check=True, **kwargs):
     try:
@@ -98,16 +92,7 @@ def add_scripts(p: PyProject, scripts: dict[str, str]) -> PyProject:
         return t.setdefault(name, tomlkit.table())
 
     table = sd(sd(p, "project"), "scripts")
-    for name, target in scripts.items():
-        table[name] = target
-    return p
-
-def add_scripts(p: PyProject, scripts: dict[str, str]) -> PyProject:
-    def sd(t, name):
-        return t.setdefault(name, tomlkit.table())
-
-    table = sd(sd(p, "project"), "scripts")
-    for name, target in scripts.items():  # name -> "module:attr"
+    for name, target in scripts.items():  
         table[name] = target
     return p
 
