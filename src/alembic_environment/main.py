@@ -23,6 +23,12 @@ WORKSPACE = {
     "environments": "database/environments",
 }
 
+SCRIPTS = {
+    "models": "database_util.clis.models.app:app",
+    "migrations": "database_util.clis.migrations.app:app",
+    "environments": "database_util.clis.environments.app:app",
+}
+
 PACKAGES = [
     "alembic>=1.18.4",
     "copier>=9.15.1",
@@ -95,6 +101,16 @@ def add_scripts(p: PyProject, scripts: dict[str, str]) -> PyProject:
     for name, target in scripts.items():
         table[name] = target
     return p
+
+def add_scripts(p: PyProject, scripts: dict[str, str]) -> PyProject:
+    def sd(t, name):
+        return t.setdefault(name, tomlkit.table())
+
+    table = sd(sd(p, "project"), "scripts")
+    for name, target in scripts.items():  # name -> "module:attr"
+        table[name] = target
+    return p
+
 
 def write_pyproject(cwd: Path, p: PyProject) -> None:
     (cwd / "pyproject.toml").write_text(tomlkit.dumps(p))
