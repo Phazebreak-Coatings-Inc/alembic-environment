@@ -14,14 +14,20 @@ from ..migrations.app import migrate
 
 app = Typer(pretty_exceptions_show_locals=False)
 
+
 @app.command(help=f"Create models from {TABLES_SQL}")
 @e
 def g(
     dry_run: DryRun = False,
 ):
-    typer.secho(f"Attempting to generate models from {TABLES_SQL.name}", fg=typer.colors.YELLOW)
+    typer.secho(
+        f"Attempting to generate models from {TABLES_SQL.name}", fg=typer.colors.YELLOW
+    )
     s = SQLGenerator()
-    typer.secho(f"\nRendered {s.len_models} model(s) from {TABLES_SQL.name}", fg=typer.colors.GREEN)
+    typer.secho(
+        f"\nRendered {s.len_models} model(s) from {TABLES_SQL.name}",
+        fg=typer.colors.GREEN,
+    )
     if not dry_run:
         s.write_files()
         repair()
@@ -37,13 +43,14 @@ def rg(dry_run: DryRun = False):
 
     typer.secho(
         f"Attempting to reverse generate mixin fields back to {TABLES_SQL.name}",
-        fg=typer.colors.YELLOW
+        fg=typer.colors.YELLOW,
     )
     r = SQLReverseGenerator(SQLModel.metadata)
     if not dry_run:
         r.write(dry_run=dry_run)
         migrate()
         typer.secho("Wrote files successfully", fg=typer.colors.GREEN)
+
 
 @app.command(help="Auto hook up imports.")
 @e

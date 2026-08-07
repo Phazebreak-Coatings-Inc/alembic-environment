@@ -9,8 +9,7 @@ from pydantic import validate_call, BeforeValidator
 from .paths import TESTS_MIGRATIONS
 
 RevisionOption = Annotated[
-    Revision, 
-    typer.Option("-r", "--revision", help="Which alembic revision to target.")
+    Revision, typer.Option("-r", "--revision", help="Which alembic revision to target.")
 ]
 VerboseOption = Annotated[
     bool, typer.Option("-v", "--verbose", help="Run in verbose mode.")
@@ -23,6 +22,7 @@ DryRun = Annotated[
     bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
 ]
 
+
 def run_steps(fns: list[Callable] | None = None, label: str | None = None):
     fns = fns or []
     total = len(fns)
@@ -30,6 +30,7 @@ def run_steps(fns: list[Callable] | None = None, label: str | None = None):
         typer.secho(f"{label or 'Running steps'} [{i}/{total}]", fg=typer.colors.CYAN)
         fn()
     typer.secho(f"Completed {total} steps successfully.", fg=typer.colors.GREEN)
+
 
 def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProcess:
     if silent:

@@ -9,7 +9,7 @@ class CreateMixin(ABC):
 
     @classmethod
     def create(cls, username: str = "Anonymous", **kwargs) -> Self:
-        return cls(created_by=username, **kwargs) #type: ignore
+        return cls(created_by=username, **kwargs)  # type: ignore
 
-class SQLModelBase(SQLModel, CreateMixin, ABC):
-    ...
+
+class SQLModelBase(SQLModel, CreateMixin, ABC): ...

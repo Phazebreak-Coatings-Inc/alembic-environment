@@ -63,9 +63,7 @@ class Model:
         return out - {self.name}
 
     def class_to_mixin(self) -> str:
-        return (
-            f"class {self.name}Mixin: ...\n"
-        )
+        return f"class {self.name}Mixin: ...\n"
 
     def class_to_model(self, known: set[str]) -> str:
         lines = [
@@ -109,6 +107,7 @@ class Model:
         imports = f"from .base import {names[0]}\nfrom .model import {names[1]}\n"
         exports = "__all__ = [" + ", ".join(f'"{n}"' for n in names) + "]\n"
         return imports + "\n" + exports
+
 
 class SQLGenerator:
     def __init__(self, dry_run: bool = False):
@@ -155,9 +154,7 @@ class SQLGenerator:
             model.get_path("base").write_text(
                 ruff_format(f"{self.header}\n\n\n{model.class_to_base()}")
             )
-            model.get_path("model").write_text(
-                ruff_format(model.class_to_model(known))
-            )
+            model.get_path("model").write_text(ruff_format(model.class_to_model(known)))
 
             mixin_path = model.get_path("mixin")
             if not mixin_path.exists():

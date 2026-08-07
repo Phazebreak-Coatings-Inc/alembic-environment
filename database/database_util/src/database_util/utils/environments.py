@@ -24,9 +24,8 @@ from pydantic import (
     BaseModel,
     SecretStr,
     model_validator,
-    PrivateAttr
+    PrivateAttr,
 )
-from functools import cached_property
 from pydantic_settings import BaseSettings
 from sqlalchemy import create_engine, text, URL
 from .paths import (
@@ -71,7 +70,9 @@ class BaseDatabaseSettings(ABC, BaseSettings):
     @abstractmethod
     def get_environment_str(self) -> str: ...
 
-    def ping(self, attempts: int = 1, delay: float = 0.5, verbose: bool = False) -> None:
+    def ping(
+        self, attempts: int = 1, delay: float = 0.5, verbose: bool = False
+    ) -> None:
         engine = self.engine
         started = time.perf_counter()
         last: Exception | None = None
@@ -83,7 +84,8 @@ class BaseDatabaseSettings(ABC, BaseSettings):
                     if verbose:
                         typer.secho(
                             f"{self.database_name} ready in "
-                            f"{(time.perf_counter() - started) * 1000:.0f}ms", fg=typer.colors.GREEN
+                            f"{(time.perf_counter() - started) * 1000:.0f}ms",
+                            fg=typer.colors.GREEN,
                         )
                     return
                 except Exception as e:
@@ -108,15 +110,17 @@ class BaseDatabaseSettings(ABC, BaseSettings):
 
         try:
             self.ping()
-            typer.secho(f"Database '{self.get_environment_str()}' is already up.", fg=typer.colors.GREEN)
+            typer.secho(
+                f"Database '{self.get_environment_str()}' is already up.",
+                fg=typer.colors.GREEN,
+            )
         except Exception:
             self.start()
             self.ping(attempts=60, verbose=True)
             startup = True
-           
+
         if startup:
             run_steps(fns=self.up_steps(), label="Running startup steps...")
-
 
     @abstractmethod
     def start(self) -> None: ...
@@ -138,12 +142,14 @@ class BaseDatabaseSettings(ABC, BaseSettings):
 
     def upgrade(self):
         from database_util.clis.migrations.app import apply
-        apply(self.get_environment_str(), interactive=False) #type: ignore
+
+        apply(self.get_environment_str(), interactive=False)  # type: ignore
 
     def seed(self):
         from database_util.clis.migrations.app import seed
+
         if (env := self.get_environment_str()) in ["dev", "prod"]:
-            return seed(env) #type: ignore
+            return seed(env)  # type: ignore
         if env == "staging":
             return self.stage()
 
@@ -157,7 +163,9 @@ class BaseDatabaseSettings(ABC, BaseSettings):
         finally:
             self.down()
 
+
 class TerraformOutputError(Exception): ...
+
 
 class TerraformOutput(BaseModel):
     value: str | int | SecretStr
@@ -202,7 +210,15 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
 
     def tf(self, cmd: str, check: bool = True, silent: bool = False, **kwargs):
         from .typer_utils import sh
-        return sh(f"terraform {cmd}", cwd=self.get_cwd(), check=check, silent=silent, text=True, **kwargs)
+
+        return sh(
+            f"terraform {cmd}",
+            cwd=self.get_cwd(),
+            check=check,
+            silent=silent,
+            text=True,
+            **kwargs,
+        )
 
     def plan(self) -> subprocess.CompletedProcess:
         self.tf("init")
@@ -272,7 +288,9 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             )
         out = outputs[key]
         return (
-            out.value.get_secret_value() if isinstance(out.value, SecretStr) else out.value
+            out.value.get_secret_value()
+            if isinstance(out.value, SecretStr)
+            else out.value
         )
 
     @abstractmethod
@@ -295,7 +313,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         p = self.database_password
         if u is None or p is None:
             raise ValueError("Expected database_user and database_password")
-        return self.create_database_url(u, p).render_as_string(hide_password=False) 
+        return self.create_database_url(u, p).render_as_string(hide_password=False)
 
     @property
     def admin_engine(self):
@@ -320,8 +338,13 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             database=self.database_name,
         )
         with create_engine(admin).begin() as c:
-            c.exec_driver_sql(f'GRANT ALL ON SCHEMA public TO "{self.database_username}"')
-        typer.secho(f"Ensured grant on schema public to {self.database_username}", fg=typer.colors.GREEN)
+            c.exec_driver_sql(
+                f'GRANT ALL ON SCHEMA public TO "{self.database_username}"'
+            )
+        typer.secho(
+            f"Ensured grant on schema public to {self.database_username}",
+            fg=typer.colors.GREEN,
+        )
 
     def temp(self) -> None:
         raise Exception("Can't spin up 'temp' for a terraformed database")
@@ -332,8 +355,6 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             self.upgrade,
             self.seed,
         ]
-
-
 
 
 class MigrationSettings(BaseDatabaseSettings):
@@ -376,7 +397,7 @@ class MigrationSettings(BaseDatabaseSettings):
         return True
 
     def get_environment_str(self) -> str:
-        return 'mig'
+        return "mig"
 
 
 migration_settings = MigrationSettings(
@@ -410,7 +431,7 @@ class DevDatabaseSettings(BaseDatabaseSettings):
             return True
 
     def get_environment_str(self) -> str:
-        return 'dev'
+        return "dev"
 
 
 dev_settings = DevDatabaseSettings(
@@ -444,7 +465,7 @@ class StagingDatabaseSettings(TerraformedDatabaseSettings[StagingOutputs]):
         self.database_password = self.get_output("staging_password")
 
     def get_environment_str(self) -> str:
-        return 'staging'
+        return "staging"
 
 
 StagingDatabaseSettings.set_cwd(PKG_PROD)
@@ -476,7 +497,12 @@ ProdDatabaseSettings.set_cwd(PKG_PROD)
 
 prod_settings = ProdDatabaseSettings()
 
-DatabaseSetting = DevDatabaseSettings | StagingDatabaseSettings | ProdDatabaseSettings | MigrationSettings
+DatabaseSetting = (
+    DevDatabaseSettings
+    | StagingDatabaseSettings
+    | ProdDatabaseSettings
+    | MigrationSettings
+)
 
 
 @validate_call
@@ -502,13 +528,17 @@ class AlembicSettings(BaseSettings):
 alembic_settings = AlembicSettings()
 alembic_env: DatabaseEnvironment = cast(DatabaseEnvironment, alembic_settings.env)
 
+
 class RevisionError(Exception): ...
+
 
 def script_dir() -> ScriptDirectory:
     return ScriptDirectory.from_config(Config("alembic.ini"))
 
+
 def alembic_heads() -> list[str]:
     return list(script_dir().get_heads())
+
 
 def validate_revs(revs: list[str]) -> list[str]:
     try:
@@ -516,10 +546,13 @@ def validate_revs(revs: list[str]) -> list[str]:
     except CommandError as e:
         raise RevisionError(f"unknown revision(s) {revs}: {e}") from e
 
+
 def is_valid_rev(rev: str) -> str:
     return validate_revs([rev])[0]
 
+
 Revision = Annotated[str, BeforeValidator(is_valid_rev)]
+
 
 def latest_rev() -> str:
     """The single head revision id."""

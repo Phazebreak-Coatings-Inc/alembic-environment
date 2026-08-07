@@ -9,6 +9,7 @@ from . import DatabaseEnvironment, get_database_setting, run_steps, DIR_SEEDS
 
 SEEDABLE_ENVS = ["dev", "prod"]
 
+
 def is_valid_seedable_env(env: str) -> "SeedableDatabaseEnvironment":
     if env not in SEEDABLE_ENVS:
         raise ValueError(
@@ -25,10 +26,14 @@ SeedableDatabaseEnvironment = Annotated[
 ]
 SeedableEnvArg = Annotated[
     SeedableDatabaseEnvironment,
-    typer.Argument(help="Choose which environment to seed for, either 'dev' or 'prod' because staging is a separate flow."),
+    typer.Argument(
+        help="Choose which environment to seed for, either 'dev' or 'prod' because staging is a separate flow."
+    ),
 ]
 
+
 class SeedingException(Exception): ...
+
 
 SEEDS: SeedRegistry = defaultdict(list)
 REQUIRES: RequiresRegistry = {}
@@ -41,8 +46,11 @@ def {name}(session: Session) -> None:
     ...
 """
 
+
 @validate_call
-def generate_seed_file(env: SeedableDatabaseEnvironment, name: str, dry_run: bool = False):
+def generate_seed_file(
+    env: SeedableDatabaseEnvironment, name: str, dry_run: bool = False
+):
     n = inflection.underscore(name)
     p = DIR_SEEDS / f"{n}.py"
     if p.exists():
@@ -56,7 +64,9 @@ def generate_seed_file(env: SeedableDatabaseEnvironment, name: str, dry_run: boo
     t = SEED_TEMPLATE.format(env=env, name=n)
 
     if dry_run:
-        typer.secho(f"Would write new seed file to {p}: \n\n{t}\n", fg=typer.colors.YELLOW)
+        typer.secho(
+            f"Would write new seed file to {p}: \n\n{t}\n", fg=typer.colors.YELLOW
+        )
 
     p.write_text(t)
     typer.secho(f"Wrote new seed file to {p}: \n\n{t}\n", fg=typer.colors.GREEN)
@@ -64,7 +74,9 @@ def generate_seed_file(env: SeedableDatabaseEnvironment, name: str, dry_run: boo
 
 
 @validate_call
-def seed(envs: list[SeedableDatabaseEnvironment], requires: list[SeedFunction] | None = None):
+def seed(
+    envs: list[SeedableDatabaseEnvironment], requires: list[SeedFunction] | None = None
+):
     def dec(fn) -> SeedFunction:
         if not (sesh := get_type_hints(fn).get("session", None)):
             raise SeedingException(
@@ -81,17 +93,20 @@ def seed(envs: list[SeedableDatabaseEnvironment], requires: list[SeedFunction] |
 
     return dec
 
+
 @validate_call
 def count_seeds(env: SeedableDatabaseEnvironment) -> int:
     return len(SEEDS[env])
+
 
 @validate_call
 def get_seeds(env: SeedableDatabaseEnvironment) -> list[SeedFunction]:
     return SEEDS[env]
 
+
 @validate_call
 def sort_seeds(env: SeedableDatabaseEnvironment) -> list[SeedFunction]:
-    fns=get_seeds(env)
+    fns = get_seeds(env)
     registered, out, done, stack = set(fns), [], set(), set()
 
     def visit(fn):
@@ -115,6 +130,7 @@ def sort_seeds(env: SeedableDatabaseEnvironment) -> list[SeedFunction]:
 
     return out
 
+
 @validate_call
 def execute_seeds(
     env: SeedableDatabaseEnvironment, dry_run: bool = False, confirm: bool = True
@@ -135,7 +151,9 @@ def execute_seeds(
         fns = [make_step(fn) for fn in sort_seeds(env)]
 
         if len(fns) == 0:
-            typer.secho(f"Found 0 seeds for environment '{env}'...", fg=typer.colors.YELLOW)
+            typer.secho(
+                f"Found 0 seeds for environment '{env}'...", fg=typer.colors.YELLOW
+            )
             return
 
         if confirm and not dry_run:
@@ -144,10 +162,7 @@ def execute_seeds(
                 abort=True,
             )
 
-        run_steps(
-            label=f"Seeding '{env}' environment",
-            fns=fns
-        )
+        run_steps(label=f"Seeding '{env}' environment", fns=fns)
 
         if errors:
             s.rollback()
@@ -157,11 +172,12 @@ def execute_seeds(
             s.rollback()
             typer.secho(
                 f"Successfully ran and rolled-back {len(fns)} seeding functions in '{env}' environment.",
-                fg=typer.colors.GREEN
+                fg=typer.colors.GREEN,
             )
             return
 
-        typer.secho(f"Successfully ran {len(fns)} seeding functions in '{env}' environment.", fg=typer.colors.GREEN)
+        typer.secho(
+            f"Successfully ran {len(fns)} seeding functions in '{env}' environment.",
+            fg=typer.colors.GREEN,
+        )
         s.commit()
-
-

@@ -1,10 +1,10 @@
 from database_util.utils import (
-    ProdDatabaseSettings, 
+    ProdDatabaseSettings,
     DevDatabaseSettings,
     StagingDatabaseSettings,
     get_database_setting,
     seed,
-    backfill
+    backfill,
 )
 
 __all__ = [
@@ -13,5 +13,5 @@ __all__ = [
     "StagingDatabaseSettings",
     "get_database_setting",
     "seed",
-    "backfill"
+    "backfill",
 ]

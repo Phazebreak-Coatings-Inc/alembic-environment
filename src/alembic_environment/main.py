@@ -146,7 +146,5 @@ def repair(
             raise typer.Exit(1)
     write_pyproject(p, add_workspaces(get_pyproject(p), WORKSPACE))
     sh(f"uv add --workspace {' '.join(WORKSPACE)}", cwd=p)
-    sh(
-        f"uv add --dev {' '.join(PACKAGES)}", cwd=p
-    ) 
+    sh(f"uv add --dev {' '.join(PACKAGES)}", cwd=p)
     sh("uv sync", cwd=p)

@@ -15,7 +15,7 @@ BackfillRegistry = dict[str, list[BackfillFunction]]
 
 BACKFILLS: BackfillRegistry = defaultdict(list)
 
-BACKFILL_TEMPLATE = '''
+BACKFILL_TEMPLATE = """
 from sqlmodel import Session
 from database_core import backfill
 
@@ -23,10 +23,11 @@ from database_core import backfill
 @backfill("{rev}")
 def backfill_{rev}(session: Session) -> None:
     ...
-'''
+"""
 
 
 class BackfillException(Exception): ...
+
 
 @validate_call
 def backfill(rev: Revision):
@@ -74,5 +75,7 @@ def write_backfill_stub(rev: str) -> Path:
         p.write_text(BACKFILL_TEMPLATE.format(rev=rev))
         typer.secho(f"Wrote backfill stub {p}", fg=typer.colors.GREEN)
     else:
-        typer.secho(f"Backfill already exists for this revision at {p}", fg=typer.colors.YELLOW)
+        typer.secho(
+            f"Backfill already exists for this revision at {p}", fg=typer.colors.YELLOW
+        )
     return p
