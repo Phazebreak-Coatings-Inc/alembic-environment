@@ -160,8 +160,12 @@ class BaseDatabaseSettings(ABC, BaseSettings):
     @contextmanager
     def temp(self):
         try:
-            self.up()
-            yield None
+            try:
+                self.ping()
+                yield None
+            except Exception:
+                self.up()
+                yield None
         finally:
             self.down()
 
