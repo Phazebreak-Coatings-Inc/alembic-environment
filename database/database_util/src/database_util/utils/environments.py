@@ -128,7 +128,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
     def up_steps(self) -> list[Callable]:
         return [
             self.upgrade,
-            self.seed,
+            lambda: self.seed(interactive=False),
         ]
 
     @abstractmethod
@@ -145,11 +145,11 @@ class BaseDatabaseSettings(ABC, BaseSettings):
 
         apply(self.get_environment_str(), interactive=False)  # type: ignore
 
-    def seed(self):
+    def seed(self, interactive: bool = False):
         from database_util.clis.migrations.app import seed
 
         if (env := self.get_environment_str()) in ["dev", "prod"]:
-            return seed(env)  # type: ignore
+            return seed(env=env, i=interactive)  # type: ignore
         if env == "staging":
             return self.stage()
 
@@ -353,7 +353,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         return [
             self.grant,
             self.upgrade,
-            self.seed,
+            lambda: self.seed(interactive=False),
         ]
 
 

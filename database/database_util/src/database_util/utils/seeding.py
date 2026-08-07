@@ -1,4 +1,6 @@
 from collections import defaultdict
+import importlib
+import pkgutil
 import typer
 from typing import Callable, get_type_hints, Annotated, Literal
 from pydantic import validate_call, BeforeValidator
@@ -130,11 +132,17 @@ def sort_seeds(env: SeedableDatabaseEnvironment) -> list[SeedFunction]:
 
     return out
 
+def load_seeds() -> None:
+    import migrations.seeds as pkg
+
+    for m in pkgutil.iter_modules(pkg.__path__):
+        importlib.import_module(f"{pkg.__name__}.{m.name}")
 
 @validate_call
 def execute_seeds(
-    env: SeedableDatabaseEnvironment, dry_run: bool = False, confirm: bool = True
+    env: SeedableDatabaseEnvironment, dry_run: bool = False, interactive: bool = True
 ):
+    load_seeds()
     errors: list[tuple[str, Exception]] = []
     with Session(get_database_setting(env).engine) as s:
 
@@ -156,7 +164,7 @@ def execute_seeds(
             )
             return
 
-        if confirm and not dry_run:
+        if interactive and not dry_run:
             typer.confirm(
                 f"This action will run {count_seeds(env)} functions on environment '{env},' Are you sure you want to proceed?",
                 abort=True,

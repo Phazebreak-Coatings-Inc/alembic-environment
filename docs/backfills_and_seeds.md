@@ -124,3 +124,16 @@ def my_first_seed(session: Session) -> None:
 
 ### Running Your Seeds
 
+We can either run seeds manually via: ```uv run python -m migrations seed {{ dev | prod }}``` or via ```uv run python -m environment up {{ dev | prod }}```
+
+For example, let's run our seed on the dev database automatically:
+
+```
+Running startup steps... [2/2]
+Seeding 'dev' environment [1/1]
+Completed 1 steps successfully.
+Successfully ran 1 seeding functions in 'dev' environment.
+Completed 2 steps successfully.
+```
+
+This way, because it's already built in to the ```up``` command, we don't have to worry about manually seeding.

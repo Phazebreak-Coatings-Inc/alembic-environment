@@ -28,6 +28,7 @@ from ...utils import (
     BackfillException,
     latest_rev,
     write_backfill_stub,
+    Interactive
 )
 
 
@@ -75,10 +76,7 @@ def migrate(message: Annotated[str, typer.Option("-m", "--message")] = ""):
 def apply(
     env: EnvArg = alembic_env,
     target: str = "head",
-    interactive: Annotated[
-        bool,
-        typer.Option("-i", "--interactive", help="Whether to confirm application."),
-    ] = True,
+    interactive: Interactive = True,
 ):
     if interactive:
         typer.confirm(f"Upgrade {env} to {target}?", abort=True)
@@ -124,11 +122,12 @@ def seed(
         ),
     ] = None,
     d: DryRun = False,
+    i: Interactive = True
 ):
     if n:
         generate_seed_file(env=env, name=n, dry_run=d)
         return
-    execute_seeds(env=env, dry_run=d, confirm=True)
+    execute_seeds(env=env, dry_run=d, interactive=i)
 
 
 @app.command(help="Create a backfill stub. Defaults to the latest revision.")

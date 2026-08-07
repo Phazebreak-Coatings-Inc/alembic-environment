@@ -21,6 +21,10 @@ EnvArg = Annotated[
 DryRun = Annotated[
     bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
 ]
+Interactive = Annotated[
+        bool,
+        typer.Option("-i", "--interactive", help="Whether to confirm application."),
+]
 
 
 def run_steps(fns: list[Callable] | None = None, label: str | None = None):
