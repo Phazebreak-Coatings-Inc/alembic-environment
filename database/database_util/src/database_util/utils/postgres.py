@@ -1,5 +1,6 @@
-from .typer_utils import sh
 import time
+
+from .typer_utils import sh
 
 IMAGE = "postgres:18-alpine"
 

@@ -1,8 +1,10 @@
 import ast
-import typer
-from .paths import PKG_MODELS, INIT_MODELS
-from .misc import ruff_format
 from pathlib import Path
+
+import typer
+
+from .misc import ruff_format
+from .paths import INIT_MODELS, PKG_MODELS
 
 
 def model_exports(init: Path) -> list[str]:

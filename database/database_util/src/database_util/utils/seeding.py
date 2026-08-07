@@ -1,13 +1,14 @@
-from collections import defaultdict
 import importlib
 import pkgutil
-import typer
-from typing import Callable, get_type_hints, Annotated, Literal
-from pydantic import validate_call, BeforeValidator
+from collections import defaultdict
+from typing import Annotated, Callable, Literal, get_type_hints
+
 import inflection
+import typer
+from pydantic import BeforeValidator, validate_call
 from sqlmodel import Session
 
-from . import DatabaseEnvironment, get_database_setting, run_steps, DIR_SEEDS
+from . import DIR_SEEDS, DatabaseEnvironment, get_database_setting, run_steps
 
 SEEDABLE_ENVS = ["dev", "prod"]
 
@@ -132,11 +133,13 @@ def sort_seeds(env: SeedableDatabaseEnvironment) -> list[SeedFunction]:
 
     return out
 
+
 def load_seeds() -> None:
     import migrations.seeds as pkg
 
     for m in pkgutil.iter_modules(pkg.__path__):
         importlib.import_module(f"{pkg.__name__}.{m.name}")
+
 
 @validate_call
 def execute_seeds(

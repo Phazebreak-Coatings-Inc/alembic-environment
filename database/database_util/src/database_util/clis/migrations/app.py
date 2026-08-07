@@ -1,36 +1,35 @@
 from pathlib import Path
 from typing import Annotated
-from pydantic import validate_call
 
 import typer
+from pydantic import validate_call
 
 from ...utils import (
-    DryRun,
-    EnvArg,
-    alembic_heads,
-    alembic_test,
-    alembic_env,
-    alembic_migrate,
-    sh,
-    alembic,
-    migration_settings as ms,
-    migration_database as mdb,
-    alembic_check,
     DIR_SEEDS,
     DIR_VERSIONS,
-    git_bot,
-    get_database_setting,
+    BackfillException,
+    DryRun,
+    EnvArg,
+    Interactive,
+    RevisionOption,
+    SeedableEnvArg,
+    alembic,
+    alembic_check,
+    alembic_env,
+    alembic_heads,
+    alembic_migrate,
+    alembic_test,
+    e,
     execute_seeds,
     generate_seed_file,
-    e,
-    SeedableEnvArg,
-    RevisionOption,
-    BackfillException,
+    get_database_setting,
+    git_bot,
     latest_rev,
+    sh,
     write_backfill_stub,
-    Interactive
 )
-
+from ...utils import migration_database as mdb
+from ...utils import migration_settings as ms
 
 app = typer.Typer()
 
@@ -122,7 +121,7 @@ def seed(
         ),
     ] = None,
     d: DryRun = False,
-    i: Interactive = True
+    i: Interactive = True,
 ):
     if n:
         generate_seed_file(env=env, name=n, dry_run=d)

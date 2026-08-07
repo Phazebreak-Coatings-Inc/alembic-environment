@@ -1,33 +1,35 @@
-from contextlib import contextmanager
-import typer
 import json
-import time
 import subprocess
+import time
+from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from pathlib import Path
 from typing import (
     Annotated,
-    Literal,
-    cast,
-    ClassVar,
-    Mapping,
-    TypedDict,
     Any,
     Callable,
+    ClassVar,
+    Literal,
+    Mapping,
+    TypedDict,
+    cast,
 )
-from abc import abstractmethod, ABC
-from pathlib import Path
+
+import typer
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
 from pydantic import (
-    BeforeValidator,
-    validate_call,
     BaseModel,
+    BeforeValidator,
+    PrivateAttr,
     SecretStr,
     model_validator,
-    PrivateAttr,
+    validate_call,
 )
 from pydantic_settings import BaseSettings
-from sqlalchemy import create_engine, text, URL
+from sqlalchemy import URL, create_engine, text
+
 from .paths import (
     ENV_DEV_COMPOSE,
     PKG_PROD,
@@ -359,8 +361,8 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
 
 class MigrationSettings(BaseDatabaseSettings):
     def start(self):
-        from .typer_utils import run_steps, sh
         from .postgres import pull_postgres
+        from .typer_utils import run_steps, sh
 
         m = self
         run_steps(

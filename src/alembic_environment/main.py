@@ -87,12 +87,13 @@ def add_workspaces(p: PyProject, workspace: dict[str, str]) -> PyProject:
             sources[name] = it
     return p
 
+
 def add_scripts(p: PyProject, scripts: dict[str, str]) -> PyProject:
     def sd(t, name):
         return t.setdefault(name, tomlkit.table())
 
     table = sd(sd(p, "project"), "scripts")
-    for name, target in scripts.items():  
+    for name, target in scripts.items():
         table[name] = target
     return p
 
@@ -159,7 +160,9 @@ def repair(
                 err=True,
             )
             raise typer.Exit(1)
-    write_pyproject(p, add_scripts(add_workspaces(get_pyproject(p), WORKSPACE), SCRIPTS))
+    write_pyproject(
+        p, add_scripts(add_workspaces(get_pyproject(p), WORKSPACE), SCRIPTS)
+    )
     sh(f"uv add --workspace {' '.join(WORKSPACE)}", cwd=p)
     sh(f"uv add --dev {' '.join(PACKAGES)}", cwd=p)
     sh("uv sync", cwd=p)

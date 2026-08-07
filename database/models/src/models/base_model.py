@@ -1,6 +1,7 @@
-from sqlmodel import SQLModel, Field
 from abc import ABC
 from typing import Self
+
+from sqlmodel import Field, SQLModel
 
 
 class CreateMixin(ABC):

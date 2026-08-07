@@ -1,6 +1,8 @@
 from pathlib import Path
+
 from sqlmodel import SQLModel
-from .seeds import *
+
 from .backfills import *
+from .seeds import *
 
 APP_METADATA = SQLModel.metadata

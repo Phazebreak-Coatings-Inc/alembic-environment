@@ -1,14 +1,15 @@
 import typer
 from typer import Typer
+
 from ...utils import (
-    PKG_MODELS,
     INIT_MODELS,
+    PKG_MODELS,
     TABLES_SQL,
+    DryRun,
     SQLGenerator,
     SQLReverseGenerator,
-    repair_model_init,
-    DryRun,
     e,
+    repair_model_init,
 )
 from ..migrations.app import migrate
 

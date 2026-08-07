@@ -10,7 +10,6 @@ from typing import Sequence, Union
 
 from database_util.utils import run_backfill
 
-
 revision: str = "2a7d456bae34"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None

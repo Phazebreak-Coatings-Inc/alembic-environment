@@ -1,14 +1,15 @@
-from collections import defaultdict
-import typer
 import importlib
+from collections import defaultdict
 from pathlib import Path
 from typing import Callable, get_type_hints
-from pydantic import validate_call
-from .typer_utils import Revision
+
+import typer
 from alembic import op
+from pydantic import validate_call
 from sqlmodel import Session
 
 from .paths import DIR_BACKFILLS
+from .typer_utils import Revision
 
 BackfillFunction = Callable[[Session], None]
 BackfillRegistry = dict[str, list[BackfillFunction]]

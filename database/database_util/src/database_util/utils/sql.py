@@ -4,18 +4,21 @@ from pathlib import Path
 from typing import Literal
 
 import inflection
-from sqlacodegen.generators import SQLModelGenerator
-from sqlalchemy import MetaData
-from sqlglot import exp
 import sqlglot
-from sqlalchemy import create_mock_engine
+from sqlacodegen.generators import SQLModelGenerator
+from sqlalchemy import MetaData, create_mock_engine
+from sqlglot import exp
 
 from . import (
     PKG_MODELS,
     TABLES_SQL,
-    migration_settings as m,
-    migration_database as mdb,
     ruff_format,
+)
+from . import (
+    migration_database as mdb,
+)
+from . import (
+    migration_settings as m,
 )
 
 FileKind = Literal["base", "mixin", "model"]

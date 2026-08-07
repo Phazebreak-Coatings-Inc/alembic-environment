@@ -1,11 +1,13 @@
-import typer
-import os
-from typing import Annotated, Callable
 import functools
+import os
 import subprocess
 from pathlib import Path
-from .environments import DatabaseEnvironment, alembic_env, Revision
-from pydantic import validate_call, BeforeValidator
+from typing import Annotated, Callable
+
+import typer
+from pydantic import BeforeValidator, validate_call
+
+from .environments import DatabaseEnvironment, Revision, alembic_env
 from .paths import TESTS_MIGRATIONS
 
 RevisionOption = Annotated[
@@ -22,8 +24,8 @@ DryRun = Annotated[
     bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
 ]
 Interactive = Annotated[
-        bool,
-        typer.Option("-i", "--interactive", help="Whether to confirm application."),
+    bool,
+    typer.Option("-i", "--interactive", help="Whether to confirm application."),
 ]
 
 
