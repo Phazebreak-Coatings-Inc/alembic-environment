@@ -8,8 +8,8 @@ import typer
 from pydantic import BeforeValidator, validate_call
 from sqlmodel import Session
 
-from .paths import DIR_SEEDS
 from .environments import DatabaseEnvironment, get_database_setting
+from .paths import DIR_SEEDS
 from .typer_utils import run_steps
 
 SEEDABLE_ENVS = ["dev", "prod"]

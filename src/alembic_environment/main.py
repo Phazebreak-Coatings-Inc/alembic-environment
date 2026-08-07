@@ -23,6 +23,8 @@ from .config import (
     SCRIPTS,
     WORKSPACE,
 )
+
+
 def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProcess:
     if silent:
         kwargs.setdefault("stdout", subprocess.PIPE)
@@ -36,6 +38,7 @@ def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProc
             if output := (e.stderr or e.stdout):
                 typer.secho(output.rstrip(), fg=typer.colors.RED, err=True)
         raise typer.Exit(e.returncode) from None
+
 
 def get_pyproject(cwd: Path) -> tomlkit.TOMLDocument:
     p = cwd / "pyproject.toml"
@@ -149,6 +152,7 @@ def repair(
     sh(f"uv add --workspace {' '.join(WORKSPACE)}", cwd=p)
     sh(f"uv add --dev {' '.join(PACKAGES)}", cwd=p)
     sh("uv sync", cwd=p)
+
 
 EXAMPLE_PYPROJECT = f"""\
 [project]

@@ -16,22 +16,30 @@ from alembic_environment.config import (
 TEMPLATE_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = TEMPLATE_ROOT / EXAMPLE_NAME
 
+
 @pytest.mark.parametrize("name,path", WORKSPACE.items())
 def test_member_is_a_package(name, path):
     assert (EXAMPLE / path / "src" / name / "__init__.py").exists()
+
 
 @pytest.fixture(scope="session")
 def doc():
     return tomlkit.parse((EXAMPLE / "pyproject.toml").read_text())
 
+
 GENERATED_AFTER_COPY = {"pyproject.toml", "uv.lock", "dist", ".venv", "src"}
+
 
 def _root_exclusions() -> list[str]:
     cfg = yaml.safe_load((TEMPLATE_ROOT / "copier.yml").read_text())
     return [
-        p for e in cfg["_exclude"] if e.startswith("/")
-        for p in [e.strip("/")] if p not in GENERATED_AFTER_COPY
+        p
+        for e in cfg["_exclude"]
+        if e.startswith("/")
+        for p in [e.strip("/")]
+        if p not in GENERATED_AFTER_COPY
     ]
+
 
 def test_user_project_preserved(doc):
     assert doc["project"]["name"] == EXAMPLE_PROJECT_NAME
@@ -43,6 +51,7 @@ def test_member_landed_and_pinned(doc, name, path):
     assert path in list(doc["tool"]["uv"]["workspace"]["members"])
     key = name.replace("_", "-")
     assert doc["tool"]["uv"]["sources"][key]["workspace"] is True
+
 
 @pytest.mark.parametrize("name,target", SCRIPTS.items())
 def test_script_registered(doc, name, target):

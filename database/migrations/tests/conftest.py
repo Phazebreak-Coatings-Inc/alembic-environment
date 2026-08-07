@@ -1,15 +1,14 @@
 # database/migrations/tests/conftest.py
 import pytest
-from pytest_alembic.config import Config
-
 from database_util.utils import migration_settings
+from pytest_alembic.config import Config
 
 
 @pytest.fixture(scope="session", autouse=True)
 def migrations_database():
     try:
         migration_settings.ping()
-        yield         
+        yield
         return
     except Exception:
         pass
@@ -20,6 +19,7 @@ def migrations_database():
 @pytest.fixture
 def alembic_engine():
     return migration_settings.engine
+
 
 @pytest.fixture
 def alembic_config():
