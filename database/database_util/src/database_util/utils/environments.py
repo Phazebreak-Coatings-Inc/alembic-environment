@@ -366,16 +366,17 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
 class MigrationSettings(BaseDatabaseSettings):
     def start(self):
         from .postgres import pull_postgres
-        from .typer_utils import run_steps, sh
+        from .typer_utils import run_steps, sh, require_docker
 
         m = self
         run_steps(
             fns=[
+                require_docker,
                 pull_postgres,
                 lambda: sh(
                     f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres:18-alpine",
                     check=True,
-                    silent=True,
+                    silent=False,
                 ),
                 lambda: self.ping(attempts=60),
             ],
@@ -418,9 +419,14 @@ migration_database = migration_settings.temp
 
 class DevDatabaseSettings(BaseDatabaseSettings):
     def start(self):
-        from .typer_utils import sh
-
-        sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
+        from .typer_utils import sh, run_steps, require_docker
+        run_steps(
+            fns=[
+                require_docker,
+                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
+            ],
+            label="Starting dev database"
+        )
 
     def down(self):
         from .typer_utils import sh

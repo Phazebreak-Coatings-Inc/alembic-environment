@@ -116,3 +116,15 @@ def alembic_migrate(message: str = ""):
         f'alembic revision --autogenerate -m "{message or "auto"}"',
         check=True,
     )
+
+class DockerUnavailable(Exception): ...
+
+def require_docker() -> None:
+    r = sh("docker info", check=False, silent=True)
+    if r.returncode != 0:
+        raise DockerUnavailable(
+            "Docker isn't available - is Docker Desktop running?\n"
+            f"{(r.stderr or r.stdout or '').strip()}"
+        )
+
+

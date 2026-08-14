@@ -100,7 +100,7 @@ def init(
     ] = ".",
 ):
     get_pyproject(Path(dest).resolve())
-    copier.run_copy(COPIER_REPO, dest)
+    copier.run_copy(COPIER_REPO, dest, unsafe=True)
     repair(dest)
 
 
@@ -130,8 +130,6 @@ def update(
             sh("git reset")
             sh("git checkout .")
             sh("git clean -d -i")
-    repair()
-
 
 @app.command(help="Hook up dependencies and workspaces correctly.")
 def repair(
