@@ -1,6 +1,8 @@
 _answers_file: .alembic-environment-answers.yml
 _tasks:
   - "uvx alembic-environment repair"
+  - "uv sync"
+  - "uv run migrations init"
 _exclude:
   - "copier.yml"
   - "/src"
@@ -48,3 +50,4 @@ _exclude:
   - "*_override.tf"
   - "*_override.tf.json"
   - "/database/environments/clusters/modules"
+  - "/database/migrations/src/migrations/versions/*"

@@ -189,7 +189,6 @@ def example():
         copier.run_copy(str(src), str(dst), defaults=True, unsafe=True, quiet=False)
 
     (dst / ANSWERS_FILE).unlink(missing_ok=True)
-    repair(str(dst))
     sh("uv build --all-packages", cwd=dst)
     sh('uv run pytest tests/test_example.py -m "not slow"', cwd=root)
     sh("uv run pytest", cwd=dst)

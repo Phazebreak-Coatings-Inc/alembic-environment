@@ -27,7 +27,6 @@ database-util = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
 environments = { workspace = true }
-database_util = {workspace = true}
 
 [dependency-groups]
 dev = [
