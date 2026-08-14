@@ -4,7 +4,6 @@ EXAMPLE_NAME = "example"
 EXAMPLE_PROJECT_NAME = "example-project"
 
 WORKSPACE = {
-    "database_core": "database/database_core",
     "database_util": "database/database_util",
     "models": "database/models",
     "migrations": "database/migrations",

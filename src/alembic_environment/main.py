@@ -66,6 +66,8 @@ def add_workspaces(p: PyProject, workspace: dict[str, str]) -> PyProject:
     ws["members"] = arr
 
     sources = sd(uv, "sources")
+    print(f"Adding workspaces: {sources}")
+
     for name in workspace:
         if name not in sources:
             it = tomlkit.inline_table()
@@ -119,7 +121,7 @@ def update(
                 "Are you sure you want to update? If you need to abort mid-update, it will trigger a 'git reset.' Make sure to save all uncommitted changes.",
                 abort=True,
             )
-            sh(f"copier update -a {ANSWERS_FILE} --conflict inline")
+            sh(f"copier update -a {ANSWERS_FILE} --conflict inline --trust")
         case True:
             typer.confirm(
                 "Are you sure you want to abort? This will trigger a 'git reset.'",

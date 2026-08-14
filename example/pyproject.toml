@@ -10,6 +10,10 @@ dependencies = [
     "models",
 ]
 
+[project.scripts]
+models = "database_util.clis.models.app:app"
+migrations = "database_util.clis.migrations.app:app"
+environments = "database_util.clis.environments.app:app"
 [build-system]
 requires = ["uv_build>=0.11.18,<0.12"]
 build-backend = "uv_build"
@@ -23,19 +27,23 @@ database-util = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
 environments = { workspace = true }
+database_util = {workspace = true}
 
 [dependency-groups]
 dev = [
-    "alembic>=1.19.0",
+    "alembic>=1.19.1",
     "copier>=9.17.1",
+    "debugpy>=1.8.21",
     "inflection>=0.5.1",
     "psycopg[binary]>=3.3.4",
     "pydantic-settings>=2.15.0",
     "pytest>=9.1.1",
     "pytest-alembic>=0.12.1",
-    "ruff>=0.16.2",
+    "ruff>=0.16.3",
+    "skylos>=4.33.2",
     "sqlacodegen>=4.0.4",
-    "sqlalchemy>=2.0.51",
+    "sqlalchemy>=2.0.52",
+    "sqlglot>=30.17.0",
     "sqlmodel>=0.0.39",
     "tomlkit>=0.15.1",
     "typer>=0.27.1",
