@@ -188,7 +188,7 @@ class SQLMergeError(Exception): ...
 
 
 def as_comment(col: exp.ColumnDef) -> exp.ColumnDef:
-    setattr(col, "_commented", True)
+    col._commented = True
     return col
 
 

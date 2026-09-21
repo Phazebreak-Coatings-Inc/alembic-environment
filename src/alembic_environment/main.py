@@ -66,6 +66,8 @@ def add_workspaces(p: PyProject, workspace: dict[str, str]) -> PyProject:
     ws["members"] = arr
 
     sources = sd(uv, "sources")
+    print(f"Adding workspaces: {sources}")
+
     for name in workspace:
         if name not in sources:
             it = tomlkit.inline_table()
@@ -98,7 +100,7 @@ def init(
     ] = ".",
 ):
     get_pyproject(Path(dest).resolve())
-    copier.run_copy(COPIER_REPO, dest)
+    copier.run_copy(COPIER_REPO, dest, unsafe=True)
     repair(dest)
 
 
@@ -119,7 +121,8 @@ def update(
                 "Are you sure you want to update? If you need to abort mid-update, it will trigger a 'git reset.' Make sure to save all uncommitted changes.",
                 abort=True,
             )
-            sh(f"copier update -a {ANSWERS_FILE} --conflict inline")
+            sh(f"copier update -a {ANSWERS_FILE} --conflict inline --trust")
+            repair()
         case True:
             typer.confirm(
                 "Are you sure you want to abort? This will trigger a 'git reset.'",
@@ -128,8 +131,6 @@ def update(
             sh("git reset")
             sh("git checkout .")
             sh("git clean -d -i")
-    repair()
-
 
 @app.command(help="Hook up dependencies and workspaces correctly.")
 def repair(
@@ -187,7 +188,6 @@ def example():
         copier.run_copy(str(src), str(dst), defaults=True, unsafe=True, quiet=False)
 
     (dst / ANSWERS_FILE).unlink(missing_ok=True)
-    repair(str(dst))
     sh("uv build --all-packages", cwd=dst)
     sh('uv run pytest tests/test_example.py -m "not slow"', cwd=root)
     sh("uv run pytest", cwd=dst)

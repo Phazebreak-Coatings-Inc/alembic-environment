@@ -1,7 +1,8 @@
 import importlib
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, get_type_hints
+from typing import get_type_hints
 
 import typer
 from alembic import op
