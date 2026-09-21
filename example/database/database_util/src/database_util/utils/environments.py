@@ -2,15 +2,14 @@ import json
 import subprocess
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Mapping
 from contextlib import contextmanager
 from pathlib import Path
 from typing import (
     Annotated,
     Any,
-    Callable,
     ClassVar,
     Literal,
-    Mapping,
     TypedDict,
     cast,
 )
@@ -38,7 +37,7 @@ from .paths import (
 ENVS = ["dev", "staging", "prod", "mig"]
 
 
-def is_valid_database_env(env: str) -> "DatabaseEnvironment":
+def is_valid_database_env(env: str) -> DatabaseEnvironment:
     if env not in ENVS:
         raise ValueError(
             f"'{env}' is not a valid database environment, choose one of {ENVS}"
@@ -366,7 +365,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
 class MigrationSettings(BaseDatabaseSettings):
     def start(self):
         from .postgres import pull_postgres
-        from .typer_utils import run_steps, sh, require_docker
+        from .typer_utils import require_docker, run_steps, sh
 
         m = self
         run_steps(
@@ -419,7 +418,7 @@ migration_database = migration_settings.temp
 
 class DevDatabaseSettings(BaseDatabaseSettings):
     def start(self):
-        from .typer_utils import sh, run_steps, require_docker
+        from .typer_utils import require_docker, run_steps, sh
         run_steps(
             fns=[
                 require_docker,
