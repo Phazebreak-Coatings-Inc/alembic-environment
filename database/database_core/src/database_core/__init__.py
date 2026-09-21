@@ -8,10 +8,10 @@ from database_util.utils import (
 )
 
 __all__ = [
-    "ProdDatabaseSettings",
     "DevDatabaseSettings",
+    "ProdDatabaseSettings",
     "StagingDatabaseSettings",
+    "backfill",
     "get_database_setting",
     "seed",
-    "backfill",
 ]

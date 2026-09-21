@@ -122,6 +122,7 @@ def update(
                 abort=True,
             )
             sh(f"copier update -a {ANSWERS_FILE} --conflict inline --trust")
+            repair()
         case True:
             typer.confirm(
                 "Are you sure you want to abort? This will trigger a 'git reset.'",

@@ -1,8 +1,9 @@
 import functools
 import os
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated, Callable
+from typing import Annotated
 
 import typer
 from pydantic import BeforeValidator, validate_call
@@ -81,7 +82,7 @@ def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
 TEST_TYPES = ["all", "migrations", "seeds"]
 
 
-def validate_test_type(t: str) -> "TestType":
+def validate_test_type(t: str) -> TestType:
     if t not in TEST_TYPES:
         raise ValueError()
     return t

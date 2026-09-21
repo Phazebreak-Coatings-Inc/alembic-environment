@@ -1,7 +1,8 @@
 import importlib
 import pkgutil
 from collections import defaultdict
-from typing import Annotated, Callable, Literal, get_type_hints
+from collections.abc import Callable
+from typing import Annotated, Literal, get_type_hints
 
 import inflection
 import typer
@@ -15,7 +16,7 @@ from .typer_utils import run_steps
 SEEDABLE_ENVS = ["dev", "prod"]
 
 
-def is_valid_seedable_env(env: str) -> "SeedableDatabaseEnvironment":
+def is_valid_seedable_env(env: str) -> SeedableDatabaseEnvironment:
     if env not in SEEDABLE_ENVS:
         raise ValueError(
             f"'{env}' is not a valid database environment, choose one of {SEEDABLE_ENVS}"
@@ -75,7 +76,6 @@ def generate_seed_file(
 
     p.write_text(t)
     typer.secho(f"Wrote new seed file to {p}: \n\n{t}\n", fg=typer.colors.GREEN)
-    return
 
 
 @validate_call
