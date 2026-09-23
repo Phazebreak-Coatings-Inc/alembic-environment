@@ -20,7 +20,6 @@ from .config import (
     EXAMPLE_NAME,
     EXAMPLE_PROJECT_NAME,
     PACKAGES,
-    SCRIPTS,
     WORKSPACE,
 )
 
@@ -73,16 +72,6 @@ def add_workspaces(p: PyProject, workspace: dict[str, str]) -> PyProject:
             it = tomlkit.inline_table()
             it["workspace"] = True
             sources[name] = it
-    return p
-
-
-def add_scripts(p: PyProject, scripts: dict[str, str]) -> PyProject:
-    def sd(t, name):
-        return t.setdefault(name, tomlkit.table())
-
-    table = sd(sd(p, "project"), "scripts")
-    for name, target in scripts.items():
-        table[name] = target
     return p
 
 
@@ -147,7 +136,7 @@ def repair(
                 err=True,
             )
             raise typer.Exit(1)
-    write_pyproject(p, add_scripts(add_workspaces(get_pyproject(p), WORKSPACE), SCRIPTS))
+    write_pyproject(p, add_workspaces(get_pyproject(p), WORKSPACE))
     sh(f"uv add --workspace {' '.join(WORKSPACE)}", cwd=p)
     sh(f"uv add --dev {' '.join(PACKAGES)}", cwd=p)
     sh("uv sync", cwd=p)

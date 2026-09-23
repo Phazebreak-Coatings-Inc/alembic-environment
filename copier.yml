@@ -1,7 +1,9 @@
 _answers_file: .alembic-environment-answers.yml
 _tasks:
-  - "uvx alembic-environment repair"
-  - "uv run migrations init"
+  - command: "uvx alembic-environment repair"
+    when: "{{ _copier_operation == 'copy' }}"
+  - command: "uv run migrations init"
+    when: "{{ _copier_operation == 'copy' }}"
 _exclude:
   - "copier.yml"
   - "/src"

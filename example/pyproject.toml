@@ -10,10 +10,6 @@ dependencies = [
     "models",
 ]
 
-[project.scripts]
-models = "database_util.clis.models.app:app"
-migrations = "database_util.clis.migrations.app:app"
-environments = "database_util.clis.environments.app:app"
 [build-system]
 requires = ["uv_build>=0.11.18,<0.12"]
 build-backend = "uv_build"

@@ -54,8 +54,11 @@ def test_member_landed_and_pinned(doc, name, path):
 
 
 @pytest.mark.parametrize("name,target", SCRIPTS.items())
-def test_script_registered(doc, name, target):
-    assert doc["project"]["scripts"][name] == target
+def test_script_registered(name, target):
+    util = tomlkit.parse(
+        (EXAMPLE / WORKSPACE["database_util"] / "pyproject.toml").read_text()
+    )
+    assert util["project"]["scripts"][name] == target
 
 
 @pytest.mark.parametrize("path", EXAMPLE_PRESENT)
