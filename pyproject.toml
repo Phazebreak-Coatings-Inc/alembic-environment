@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
+    "copier-template>=0.1.8",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
 ]
@@ -37,18 +38,18 @@ norecursedirs = [
     "{arch}",
     "example",
 ]
-testpaths = ["tests", "database"]
+testpaths = ["tests", "template/database"]
 
 [tool.ruff]
 exclude = ["example"]
 
 [tool.uv.workspace]
 members = [
-    "database/models",
-    "database/migrations",
-    "database/environments",
-    "database/database_util",
-    "database/database_core",
+    "template/database/models",
+    "template/database/migrations",
+    "template/database/environments",
+    "template/database/database_util",
+    "template/database/database_core",
 ]
 exclude = ["example"]
 

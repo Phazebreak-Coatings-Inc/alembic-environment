@@ -1,5 +1,5 @@
 [project]
-name = "example-project"
+name = "example_project"
 version = "0.1.0"
 requires-python = ">=3.14"
 dependencies = [
@@ -26,20 +26,20 @@ environments = { workspace = true }
 
 [dependency-groups]
 dev = [
-    "alembic>=1.20.0",
-    "copier>=9.18.2",
-    "debugpy>=1.8.22",
+    "alembic>=1.18.4",
+    "copier>=9.15.1",
+    "debugpy>=1.8.21",
     "inflection>=0.5.1",
-    "psycopg[binary]>=3.3.6",
-    "pydantic-settings>=2.15.0",
+    "psycopg[binary]>=3.3.4",
+    "pydantic-settings>=2.14.1",
     "pytest>=9.1.1",
     "pytest-alembic>=0.12.1",
-    "ruff>=0.16.8",
-    "skylos>=4.37.0",
-    "sqlacodegen>=4.0.4",
-    "sqlalchemy>=2.0.54",
-    "sqlglot>=30.18.0",
-    "sqlmodel>=0.0.44",
-    "tomlkit>=0.15.1",
-    "typer>=0.27.2",
+    "ruff>=0.15.15",
+    "skylos>=4.29.0",
+    "sqlacodegen>=4.0.3",
+    "sqlalchemy>=2.0.50",
+    "sqlglot>=30.12.0",
+    "sqlmodel>=0.0.38",
+    "tomlkit>=0.15.0",
+    "typer>=0.26.6",
 ]

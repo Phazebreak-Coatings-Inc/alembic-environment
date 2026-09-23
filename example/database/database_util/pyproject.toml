@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14.5"
 dependencies = [
+    "database_core",
     "alembic>=1.18.4",
     "inflection>=0.5.1",
     "psycopg[binary]>=3.3.4",

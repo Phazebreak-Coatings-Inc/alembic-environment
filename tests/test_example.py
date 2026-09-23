@@ -9,7 +9,7 @@ from alembic_environment.config import (
     EXAMPLE_NAME,
     EXAMPLE_PRESENT,
     EXAMPLE_PROJECT_NAME,
-    SCRIPTS,
+    DATABASE_UTIL_SCRIPTS,
     WORKSPACE,
 )
 
@@ -53,7 +53,7 @@ def test_member_landed_and_pinned(doc, name, path):
     assert doc["tool"]["uv"]["sources"][key]["workspace"] is True
 
 
-@pytest.mark.parametrize("name,target", SCRIPTS.items())
+@pytest.mark.parametrize("name,target", DATABASE_UTIL_SCRIPTS.items())
 def test_script_registered(name, target):
     util = tomlkit.parse(
         (EXAMPLE / WORKSPACE["database_util"] / "pyproject.toml").read_text()
@@ -72,7 +72,7 @@ def test_excluded_path_absent(path):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("name", SCRIPTS)
+@pytest.mark.parametrize("name", DATABASE_UTIL_SCRIPTS)
 def test_script_runs(name):
     subprocess.run(["uv", "sync"], cwd=EXAMPLE, check=True)
     r = subprocess.run(
