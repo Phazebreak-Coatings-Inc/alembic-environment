@@ -21,7 +21,8 @@ def alembic_engine():
     return migration_settings.engine
 
 
+from pathlib import Path
+
 @pytest.fixture
 def alembic_config():
-    """Override this fixture to configure the exact alembic context setup required."""
-    return Config()
+    return Config(config_options={"file": str(Path(__file__).resolve().parents[3] / "alembic.ini")})
