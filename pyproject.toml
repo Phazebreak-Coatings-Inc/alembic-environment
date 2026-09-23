@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
-    "copier-template>=0.1.8",
+    "copier-template>=0.1.9",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
 ]
@@ -54,6 +54,7 @@ members = [
 exclude = ["example"]
 
 [tool.uv.sources]
+copier-template = { git = "https://github.com/Phazebreak-Coatings-Inc/copier-template", branch = "019" }
 database_util = { workspace = true }
 database_core = { workspace = true }
 models = { workspace = true }

@@ -68,7 +68,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "copier", specifier = ">=9.15.1" },
-    { name = "copier-template", specifier = ">=0.1.8" },
+    { name = "copier-template", git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019" },
     { name = "tomlkit", specifier = ">=0.15.0" },
     { name = "typer", specifier = ">=0.26.6" },
 ]
@@ -322,18 +322,14 @@ wheels = [
 
 [[package]]
 name = "copier-template"
-version = "0.1.8"
-source = { registry = "https://pypi.org/simple" }
+version = "0.1.9"
+source = { git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019#7af5936fc0634d9245fd7add189e0c8361fff5b2" }
 dependencies = [
     { name = "copier" },
     { name = "inflection" },
     { name = "pytest" },
     { name = "tomlkit" },
     { name = "typer" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5b/c9/57c8c2dc063e7e35db12d7f2bb85c21d78af55a1de184ea4f9b0ff99aa86/copier_template-0.1.8.tar.gz", hash = "sha256:ee568f43364014dc6ac589fc2143660970dd11daada911560dbb2c12a0c49d5b", size = 5322, upload-time = "2026-09-16T23:47:24.841Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/9e/c5/77ae123db2e35185261a4a3edf06a604aba04b145387cbe51a78602cfafa/copier_template-0.1.8-py3-none-any.whl", hash = "sha256:9d42f6a4c386624525b1a6b8d96d60ddccf8da2b8b49f1ee63969af30cd9a9b0", size = 7269, upload-time = "2026-09-16T23:47:23.982Z" },
 ]
 
 [[package]]

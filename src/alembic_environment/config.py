@@ -57,7 +57,10 @@ PACKAGES = [
     "sqlacodegen>=4.0.3",
     "sqlglot>=30.12.0",
 ]
-"""The packages that should be added to the target pyproject."""
+"""The dev packages that should be added to the target pyproject."""
+
+DEPENDENCIES: list[str] = []
+"""The runtime packages that should be added to the target pyproject."""
 
 
 DATABASE_UTIL_SCRIPTS = {
