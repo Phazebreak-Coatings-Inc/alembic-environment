@@ -1,31 +1,43 @@
+import pytest
 import subprocess
+from copier_template.util import sh
+from alembic_environment.config import EXAMPLE_PROJECT_NAME
+
 from pathlib import Path
 
-import pytest
-
-from alembic_environment.config import ANSWERS_FILE
-from alembic_environment.main import sh
-
 TEMPLATE_ROOT = Path(__file__).resolve().parents[1]
+
+import yaml
+
+def git(*args: str) -> str:
+    return subprocess.check_output(["git", *args], cwd=TEMPLATE_ROOT, text=True).strip()
 
 
 @pytest.mark.slow
 def test_update(tmp_path):
+    if Path(git("rev-parse", "--show-toplevel")).resolve() != TEMPLATE_ROOT:
+        pytest.skip("copier only records _commit when the template is a git repo root")
+
+    cfg = yaml.safe_load((TEMPLATE_ROOT / "copier.yml").read_text())
+    answers_file = cfg["_answers_file"]
+    prev = git("describe", "--tags", "--abbrev=0", "HEAD~1")
     dst = tmp_path / "proj"
-    prev = subprocess.check_output(
-        ["git", "describe", "--tags", "--abbrev=0", "HEAD~1"],
-        cwd=TEMPLATE_ROOT,
-        text=True,
-    ).strip()
 
     sh(
-        f"copier copy {TEMPLATE_ROOT} {dst} --trust --vcs-ref={prev} --defaults --skip-tasks"
+        f"copier copy {TEMPLATE_ROOT} {dst} --trust --vcs-ref={prev} --skip-tasks "
+        f"-d project_name={EXAMPLE_PROJECT_NAME} -d github_repo=test/test "
+        f"-d your_name=Test --defaults"
     )
+    answers = dst / answers_file
+    if not answers.exists() or "_commit" not in yaml.safe_load(answers.read_text()):
+        pytest.skip(f"{prev} does not write {answers_file} with _commit")
+
     sh("git init", cwd=dst)
     sh("git add -A", cwd=dst)
     sh('git -c user.email=t@t -c user.name=t commit -m "init"', cwd=dst)
     sh(
-        f"copier update -a {ANSWERS_FILE} --trust --vcs-ref=HEAD --defaults --conflict rej --skip-tasks",
+        f"copier update -a {answers_file} --trust --vcs-ref=HEAD --defaults "
+        f"--conflict rej --skip-tasks",
         cwd=dst,
     )
 
