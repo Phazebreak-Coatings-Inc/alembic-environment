@@ -97,7 +97,9 @@ def example():  # this command explicitly is not meant to update, it just doesn'
     )
 
     prepare_pyproject(dst, EXAMPLE_PROJECT_NAME)
+
     sh("uv build --all-packages", cwd=dst)
+    sh("uv run migrations init", cwd=dst)
     sh('uv run pytest tests/test_example.py -m "not slow"', cwd=root)
     sh("uv run pytest --ignore=example", cwd=dst, check=False)
     typer.secho(f"Regenerated {dst}", fg=typer.colors.GREEN)

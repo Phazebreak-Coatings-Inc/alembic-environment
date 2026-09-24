@@ -379,8 +379,8 @@ wheels = [
 
 [[package]]
 name = "copier-template"
-version = "0.1.9"
-source = { git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019#5e10033c6489846289152fce4a4d8d0588425641" }
+version = "0.1.9.post1"
+source = { git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019#667690b1d8c5ae16cc648ad800dfa082204c7063" }
 dependencies = [
     { name = "copier" },
     { name = "inflection" },
