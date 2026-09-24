@@ -1,15 +1,15 @@
 """initial
 
-Revision ID: 619c6478955f
+Revision ID: c218e16ccb64
 Revises: 
-Create Date: 2026-09-24 11:41:36.478822
+Create Date: 2026-09-24 11:50:53.033352
 
 """
 from collections.abc import Sequence
 
 from database_util.utils import run_backfill
 
-revision: str = '619c6478955f'
+revision: str = 'c218e16ccb64'
 down_revision: str | Sequence[str] | None = None
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
