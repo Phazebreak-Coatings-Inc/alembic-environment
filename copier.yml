@@ -1,26 +1,6 @@
+_subdirectory: template
 _answers_file: .alembic-environment-answers.yml
-_tasks:
-  - "uvx alembic-environment repair"
-  - "uv run migrations init"
 _exclude:
-  - "copier.yml"
-  - "/src"
-  - "/pyproject.toml"
-  - "/uv.lock"
-  - "/tests"
-  - "/example"
-  - "/docs"
-  - "/site"
-  - "/dist"
-  - "/cache"
-  - "/zensical.toml"
-  - "/LICENSE"
-  - "/README.md"
-  - "/.github/workflows/docs.yml"
-  - "/.github/workflows/release.yml"
-  - "/.github/workflows/dependabot.yml"
-  - "/.github/workflows/format.yml"
-  - "/.github/workflows/skylos.yml"
   - ".git"
   - ".gitignore"
   - ".venv"

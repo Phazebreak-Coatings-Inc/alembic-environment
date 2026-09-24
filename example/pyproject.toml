@@ -1,49 +1,23 @@
 [project]
-name = "example-project"
+name = "example_project"
 version = "0.1.0"
 requires-python = ">=3.14"
-dependencies = [
-    "database-core",
-    "database-util",
-    "environments",
-    "migrations",
-    "models",
-]
+dependencies = ["database_core", "database_util", "models", "migrations", "environments"]
 
-[project.scripts]
-models = "database_util.clis.models.app:app"
-migrations = "database_util.clis.migrations.app:app"
-environments = "database_util.clis.environments.app:app"
 [build-system]
 requires = ["uv_build>=0.11.18,<0.12"]
 build-backend = "uv_build"
 
+[tool.uv.sources]
+copier-template = {path = "..", editable = true}
+database_core = {workspace = true}
+database_util = {workspace = true}
+models = {workspace = true}
+migrations = {workspace = true}
+environments = {workspace = true}
+
 [tool.uv.workspace]
 members = ["database/database_core", "database/database_util", "database/models", "database/migrations", "database/environments"]
 
-[tool.uv.sources]
-database-core = { workspace = true }
-database-util = { workspace = true }
-models = { workspace = true }
-migrations = { workspace = true }
-environments = { workspace = true }
-
 [dependency-groups]
-dev = [
-    "alembic>=1.20.0",
-    "copier>=9.18.2",
-    "debugpy>=1.8.22",
-    "inflection>=0.5.1",
-    "psycopg[binary]>=3.3.6",
-    "pydantic-settings>=2.15.0",
-    "pytest>=9.1.1",
-    "pytest-alembic>=0.12.1",
-    "ruff>=0.16.8",
-    "skylos>=4.37.0",
-    "sqlacodegen>=4.0.4",
-    "sqlalchemy>=2.0.54",
-    "sqlglot>=30.18.0",
-    "sqlmodel>=0.0.44",
-    "tomlkit>=0.15.1",
-    "typer>=0.27.2",
-]
+dev = ["copier>=9.15.1", "inflection>=0.5.1", "pytest>=9.1.1", "tomlkit>=0.15.0", "typer>=0.26.6", "skylos>=4.29.0", "debugpy>=1.8.21", "alembic>=1.18.4", "sqlalchemy>=2.0.50", "sqlmodel>=0.0.38", "pytest-alembic>=0.12.1", "pydantic-settings>=2.14.1", "psycopg[binary]>=3.3.4", "ruff>=0.15.15", "sqlacodegen>=4.0.3", "sqlglot>=30.12.0"]

@@ -9,7 +9,7 @@ from alembic_environment.config import (
     EXAMPLE_NAME,
     EXAMPLE_PRESENT,
     EXAMPLE_PROJECT_NAME,
-    SCRIPTS,
+    DATABASE_UTIL_SCRIPTS,
     WORKSPACE,
 )
 
@@ -24,7 +24,10 @@ def test_member_is_a_package(name, path):
 
 @pytest.fixture(scope="session")
 def doc():
-    return tomlkit.parse((EXAMPLE / "pyproject.toml").read_text())
+    p = EXAMPLE / "pyproject.toml"
+    if not p.exists():
+        pytest.skip(f"no example at {EXAMPLE}")
+    return tomlkit.parse(p.read_text())
 
 
 GENERATED_AFTER_COPY = {"pyproject.toml", "uv.lock", "dist", ".venv", "src"}
@@ -53,9 +56,12 @@ def test_member_landed_and_pinned(doc, name, path):
     assert doc["tool"]["uv"]["sources"][key]["workspace"] is True
 
 
-@pytest.mark.parametrize("name,target", SCRIPTS.items())
-def test_script_registered(doc, name, target):
-    assert doc["project"]["scripts"][name] == target
+@pytest.mark.parametrize("name,target", DATABASE_UTIL_SCRIPTS.items())
+def test_script_registered(name, target):
+    util = tomlkit.parse(
+        (EXAMPLE / WORKSPACE["database_util"] / "pyproject.toml").read_text()
+    )
+    assert util["project"]["scripts"][name] == target
 
 
 @pytest.mark.parametrize("path", EXAMPLE_PRESENT)
@@ -69,7 +75,7 @@ def test_excluded_path_absent(path):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("name", SCRIPTS)
+@pytest.mark.parametrize("name", DATABASE_UTIL_SCRIPTS)
 def test_script_runs(name):
     subprocess.run(["uv", "sync"], cwd=EXAMPLE, check=True)
     r = subprocess.run(

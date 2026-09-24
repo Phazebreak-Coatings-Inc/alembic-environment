@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
+    "copier-template>=0.1.10",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
 ]
@@ -17,6 +18,7 @@ Repository = "https://github.com/Phazebreak-Coatings-Inc/alembic-environment"
 
 [project.scripts]
 alembic-environment = "alembic_environment.__main__:main"
+alembic_environment = "alembic_environment.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.11.18,<0.12"]
@@ -37,22 +39,35 @@ norecursedirs = [
     "{arch}",
     "example",
 ]
-testpaths = ["tests", "database"]
+testpaths = ["tests", "template/database"]
 
 [tool.ruff]
 exclude = ["example"]
 
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # Pyflakes (syntax, undefined names, etc.)
+    "I",    # isort (clean and sorted imports)
+    "UP",   # pyupgrade (upgrades syntax to your target Python version)
+    "B",    # flake8-bugbear (catches design flaws and subtle bugs)
+    "SIM",  # flake8-simplify (suggests simpler code structures)
+    "C90",
+]
+
 [tool.uv.workspace]
 members = [
-    "database/models",
-    "database/migrations",
-    "database/environments",
-    "database/database_util",
-    "database/database_core",
+    "template/database/models",
+    "template/database/migrations",
+    "template/database/environments",
+    "template/database/database_util",
+    "template/database/database_core",
 ]
 exclude = ["example"]
 
 [tool.uv.sources]
+copier-template = { git = "https://github.com/Phazebreak-Coatings-Inc/copier-template", branch = "019" }
 database_util = { workspace = true }
 database_core = { workspace = true }
 models = { workspace = true }
@@ -72,7 +87,7 @@ dev = [
     "database_util",
     "database_core",
     "pytest-alembic>=0.12.1",
-    "pytest>=9.0.3",
+    "pytest>=9.1.1",
     "pydantic-settings>=2.14.1",
     "psycopg[binary]>=3.3.4",
     "ruff>=0.15.15",
