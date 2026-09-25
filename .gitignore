@@ -3,7 +3,10 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-# example
+#nx
+.nx/
+
+#example
 example/
 
 # C extensions
@@ -222,7 +225,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-
 #Terraform
 .terraform/
 *.tfstate
@@ -239,8 +241,3 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
-
-.nx/installation
-.nx/cache
-.nx/workspace-data
-.nx/self-healing
