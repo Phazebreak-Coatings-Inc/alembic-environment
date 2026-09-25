@@ -4,13 +4,15 @@ The template ships with [Logfire](https://logfire.pydantic.dev/) tracing. It sen
 
 ## Setup
 
-Create a write token in your Logfire project. Export it:
+Use a write token from the Logfire project your app already sends to. Database traces then sit next to your app traces under their own service name. Export it:
 
 ```sh
 export LOGFIRE_TOKEN=your-write-token
 ```
 
 In CI, add `LOGFIRE_TOKEN` as a repository secret. `alembic-cicd.yml` reads it.
+
+Traces are stored in Logfire. Nothing is written to your databases.
 
 ## What is traced
 
@@ -24,7 +26,7 @@ In CI, add `LOGFIRE_TOKEN` as a repository secret. `alembic-cicd.yml` reads it.
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `LOGFIRE_TOKEN` | unset | Enables sending |
-| `LOGFIRE_SERVICE_NAME` | `database` | Service name in Logfire |
+| `LOGFIRE_SERVICE_NAME` | `<root project>-database` | Service name in Logfire |
 | `LOGFIRE_ENVIRONMENT` | `ALEMBIC_ENV` | Environment tag |
 | `LOGFIRE_CONSOLE` | off | Set to `true` to print spans to the terminal |
 

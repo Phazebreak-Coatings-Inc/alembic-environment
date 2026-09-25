@@ -1,20 +1,31 @@
 import functools
 import os
+import tomllib
 from collections.abc import Iterator
 from contextlib import contextmanager
 
 import logfire
 from logfire.propagate import attach_context, get_context
 
-SERVICE_NAME = "database"
+from .paths import ROOT_PYPROJECT
+
 TRACE_ENV_VARS = ("TRACEPARENT", "TRACESTATE")
+
+
+def service_name() -> str:
+    """The root project's name with a '-database' suffix."""
+    try:
+        name = tomllib.loads(ROOT_PYPROJECT.read_text())["project"]["name"]
+    except OSError, KeyError, tomllib.TOMLDecodeError:
+        return "database"
+    return f"{name}-database"
 
 
 @functools.cache
 def configure_telemetry() -> None:
     """Configure logfire once per process. Sends data only when LOGFIRE_TOKEN is set."""
     logfire.configure(
-        service_name=os.environ.get("LOGFIRE_SERVICE_NAME", SERVICE_NAME),
+        service_name=os.environ.get("LOGFIRE_SERVICE_NAME") or service_name(),
         environment=os.environ.get("LOGFIRE_ENVIRONMENT")
         or os.environ.get("ALEMBIC_ENV"),
         send_to_logfire="if-token-present",
