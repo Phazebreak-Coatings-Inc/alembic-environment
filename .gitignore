@@ -239,3 +239,8 @@ override.tf.json
 *_override.tf.json
 .terraformrc
 terraform.rc
+
+.nx/installation
+.nx/cache
+.nx/workspace-data
+.nx/self-healing
