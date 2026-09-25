@@ -41,3 +41,8 @@ output "admin_password" {
   sensitive = true
   value     = module.cluster.admin_password
 }
+
+output "logfire_token" {
+  sensitive = true
+  value     = module.logfire.write_token
+}

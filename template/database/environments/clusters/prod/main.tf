@@ -1,5 +1,10 @@
 variable "do_token" {}
 
+variable "project_name" {
+  type        = string
+  description = "Set by the environments CLI from the root pyproject name."
+}
+
 provider "digitalocean" {
   token = var.do_token
 } 
@@ -27,3 +32,7 @@ module "staging_database" {
   user_name  = "staging_user"
 }
 
+module "logfire" {
+  source       = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/environments/clusters/modules/logfire?ref=main"
+  project_name = var.project_name
+}

@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import time
 from abc import ABC, abstractmethod
@@ -214,6 +215,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         return self.plan_file.exists()
 
     def tf(self, cmd: str, check: bool = True, silent: bool = False, **kwargs):
+        from .telemetry import read_project_name
         from .typer_utils import sh
 
         return sh(
@@ -222,6 +224,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             check=check,
             silent=silent,
             text=True,
+            env={"TF_VAR_project_name": read_project_name(), **os.environ},
             **kwargs,
         )
 

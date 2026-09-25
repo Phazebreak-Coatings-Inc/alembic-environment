@@ -11,7 +11,7 @@ from pydantic import BeforeValidator, validate_call
 
 from .environments import DatabaseEnvironment, Revision, alembic_env
 from .paths import TESTS_MIGRATIONS
-from .telemetry import configure_telemetry, trace_env
+from .telemetry import setup_telemetry, trace_env
 
 RevisionOption = Annotated[
     Revision, typer.Option("-r", "--revision", help="Which alembic revision to target.")
@@ -37,7 +37,8 @@ def run_steps(fns: list[Callable] | None = None, label: str | None = None):
     total = len(fns)
     for i, fn in enumerate(fns, 1):
         typer.secho(f"{label or 'Running steps'} [{i}/{total}]", fg=typer.colors.CYAN)
-        fn()
+        with logfire.span("step {name}", name=fn.__name__, label=label, index=i):
+            fn()
     typer.secho(f"Completed {total} steps successfully.", fg=typer.colors.GREEN)
 
 
@@ -62,7 +63,7 @@ def e(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        configure_telemetry()
+        setup_telemetry()
         try:
             with logfire.span("{command}", command=func.__name__):
                 return func(*args, **kwargs)

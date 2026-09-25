@@ -4,10 +4,10 @@ from logging.config import fileConfig
 import logfire
 from alembic import context
 from database_util.utils import (
-    configure_telemetry,
     get_database_setting,
     inherited_trace,
     migration_settings,
+    setup_telemetry,
 )
 from sqlalchemy import engine_from_config, pool
 
@@ -16,7 +16,7 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-configure_telemetry()
+setup_telemetry()
 
 from migrations import APP_METADATA
 
