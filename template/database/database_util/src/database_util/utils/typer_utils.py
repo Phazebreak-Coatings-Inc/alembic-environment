@@ -1,15 +1,16 @@
-import functools
-import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
+import logfire
 import typer
+from copier_template.util import cli_exception_handler, sh
 from pydantic import BeforeValidator, validate_call
 
 from .environments import DatabaseEnvironment, Revision, alembic_env
 from .paths import TESTS_MIGRATIONS
+from .telemetry import trace_env
 
 RevisionOption = Annotated[
     Revision, typer.Option("-r", "--revision", help="Which alembic revision to target.")
@@ -35,39 +36,9 @@ def run_steps(fns: list[Callable] | None = None, label: str | None = None):
     total = len(fns)
     for i, fn in enumerate(fns, 1):
         typer.secho(f"{label or 'Running steps'} [{i}/{total}]", fg=typer.colors.CYAN)
-        fn()
+        with logfire.span("step {name}", name=fn.__name__, label=label, index=i):
+            fn()
     typer.secho(f"Completed {total} steps successfully.", fg=typer.colors.GREEN)
-
-
-def sh(cmd: str, silent=False, check=True, **kwargs) -> subprocess.CompletedProcess:
-    if silent:
-        kwargs.setdefault("stdout", subprocess.PIPE)
-        kwargs.setdefault("stderr", subprocess.PIPE)
-        kwargs.setdefault("text", True)
-    try:
-        return subprocess.run(cmd, shell=True, check=check, **kwargs)
-    except subprocess.CalledProcessError as e:
-        if not silent:
-            typer.secho(f"\nFailed: {cmd}", fg=typer.colors.BRIGHT_RED, err=True)
-            if output := (e.stderr or e.stdout):
-                typer.secho(output.rstrip(), fg=typer.colors.RED, err=True)
-        raise typer.Exit(e.returncode) from None
-
-
-def e(func):
-    """Wraps in try/except, mapping unhandled errors to exit code 1."""
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except typer.Exit, typer.Abort:
-            raise
-        except Exception as exc:
-            typer.secho(str(exc), err=True, fg=typer.colors.RED)
-            raise typer.Exit(1)
-
-    return wrapper
 
 
 @validate_call
@@ -75,9 +46,11 @@ def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
     sh(
         f"alembic {cmd}",
         check=True,
-        env={**os.environ, "ALEMBIC_ENV": env},
+        env={"ALEMBIC_ENV": env, **trace_env()},
     )
 
+
+e = cli_exception_handler
 
 TEST_TYPES = ["all", "migrations", "seeds"]
 
@@ -100,9 +73,9 @@ def alembic_test(typ: TestType = "all", throw: bool = False):
 
 
 def alembic_check():
-    sh("alembic upgrade head")
+    alembic("upgrade head", "mig")
     try:
-        sh("alembic check", check=True)
+        alembic("check", "mig")
     except subprocess.CalledProcessError as e:
         raise typer.Exit(e.returncode) from None
 
@@ -111,14 +84,13 @@ def alembic_migrate(message: str = ""):
     from .environments import alembic_heads
 
     if len(alembic_heads()) > 1:
-        sh('alembic merge -m "merge heads" heads')
-    sh("alembic upgrade head", check=True)
-    sh(
-        f'alembic revision --autogenerate -m "{message or "auto"}"',
-        check=True,
-    )
+        alembic('merge -m "merge heads" heads', "mig")
+    alembic("upgrade head", "mig")
+    alembic(f'revision --autogenerate -m "{message or "auto"}"', "mig")
+
 
 class DockerUnavailable(Exception): ...
+
 
 def require_docker() -> None:
     r = sh("docker info", check=False, silent=True)
@@ -127,5 +99,3 @@ def require_docker() -> None:
             "Docker isn't available - is Docker Desktop running?\n"
             f"{(r.stderr or r.stdout or '').strip()}"
         )
-
-

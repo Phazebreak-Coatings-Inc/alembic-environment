@@ -20,7 +20,7 @@ WORKSPACE: dict[str, str] = {
     "database_util": "database/database_util",
     "models": "database/models",
     "migrations": "database/migrations",
-    "environments": "database/environments",
+    "database_environments": "database/database_environments",
 }
 """Workspace members to add to the target pyproject.
 
@@ -42,6 +42,7 @@ SCRIPTS: dict[str, str] = {}
 PACKAGES = [
     "copier>=9.15.1",
     "inflection>=0.5.1",
+    "logfire[sqlalchemy]>=5.1.1",
     "pytest>=9.1.1",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",

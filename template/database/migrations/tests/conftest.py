@@ -23,6 +23,11 @@ def alembic_engine():
 
 from pathlib import Path
 
+
 @pytest.fixture
 def alembic_config():
-    return Config(config_options={"file": str(Path(__file__).resolve().parents[3] / "alembic.ini")})
+    return Config(
+        config_options={
+            "file": str(Path(__file__).resolve().parents[3] / "alembic.ini")
+        }
+    )

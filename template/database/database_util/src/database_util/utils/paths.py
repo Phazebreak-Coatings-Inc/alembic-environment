@@ -1,14 +1,15 @@
 from pathlib import Path
 
 DIR_DATABASE = Path(__file__).parent.parent.parent.parent.parent
-WS_ENVIRONMENTS = DIR_DATABASE / "environments"
+ROOT_PYPROJECT = DIR_DATABASE.parent / "pyproject.toml"
+WS_ENVIRONMENTS = DIR_DATABASE / "database_environments"
 WS_MIGRATIONS = DIR_DATABASE / "migrations"
 WS_MODELS = DIR_DATABASE / "models"
 TABLES_SQL = WS_MODELS / "tables.sql"
 PKG_MODELS = WS_MODELS / "src" / "models"
 PKG_MIGRATIONS = WS_MIGRATIONS / "src" / "migrations"
 TESTS_MIGRATIONS = WS_MIGRATIONS / "tests"
-PKG_ENVIRONMENTS = WS_ENVIRONMENTS / "src" / "environments"
+PKG_ENVIRONMENTS = WS_ENVIRONMENTS / "src" / "database_environments"
 DIR_SEEDS = PKG_MIGRATIONS / "seeds"
 INIT_MODELS = PKG_MODELS / "__init__.py"
 DIR_VERSIONS = PKG_MIGRATIONS / "versions"

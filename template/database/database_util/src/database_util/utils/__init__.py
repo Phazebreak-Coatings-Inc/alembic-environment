@@ -7,4 +7,5 @@ from .paths import *
 from .postgres import *
 from .seeding import *
 from .sql import *
+from .telemetry import *
 from .typer_utils import *

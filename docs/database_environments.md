@@ -8,11 +8,11 @@ To setup your ```dev``` environment. We don't need to pass any kind of environme
 
 Run the following command to bring up your database:
 
-```uv run python -m environments up dev```
+```uv run python -m database_environments up dev```
 
 ```
 PS C:\Users\miles\PycharmProjects\alembic-environment> uv run python 
--m environments up dev
+-m database_environments up dev
 [+] up 2/2
  ✔ Network dev_default              Created                      0.0s
  ✔ Container postgres_dev_container Created                      0.1s
@@ -33,7 +33,7 @@ Let's go ahead and ping it after to make sure everything's okay:
 
 ```
 PS C:\Users\miles\PycharmProjects\alembic-environment> uv run python 
--m environments ping dev
+-m database_environments ping dev
 dev_db ready in 26ms
 ```
 
@@ -80,7 +80,7 @@ TF_VAR_do_token="{{Your digital ocean token here}}"
 Once you have listed your token under ```TF_VAR_do_token```, go ahead and terraform your database environments using the following command:
 
 ```
-uv run --env-file .env python -m environments up prod
+uv run --env-file .env python -m database_environments up prod
 ```
 
 It will alert us that we're successfully connected to the cloud:
@@ -185,7 +185,7 @@ Changes to Outputs:
 
 The database cluster can up to 10 minutes to provision. Don't cancel the current command.
 
-If you want to destroy your infrastructure, run ```uv run --env-file .env python -m environments down prod --destroy```.
+If you want to destroy your infrastructure, run ```uv run --env-file .env python -m database_environments down prod --destroy```.
 
 ## Applying Migrations
 
@@ -211,7 +211,7 @@ L.
 
 We can use the ```--startup``` flag to call startup steps on whichever environment we want.
 
-```uv run --env-file .env python -m environments up --startup```
+```uv run --env-file .env python -m database_environments up --startup```
 
 !!! Warning
     
@@ -264,7 +264,7 @@ engine = get_database_setting(env).engine
 
 If you want to query a database environment directly, use the following:
 
-```uv run --env-file .env python -m environments exec```
+```uv run --env-file .env python -m database_environments exec```
 
 We can either feed the command SQL or the name of a ```.sql``` file.
 
@@ -275,7 +275,7 @@ SELECT 1
 ```
 
 ```
-uv run --env-file .env python -m environments exec dev --sql "SELECT 1"
+uv run --env-file .env python -m database_environments exec dev --sql "SELECT 1"
 ```
 
 The output:
@@ -288,7 +288,7 @@ The output:
 We can do the same thing by making a ```.sql``` file called ```select.sql``` and putting ```SELECT 1``` there.
 
 ```
-uv run --env-file .env python -m environments exec dev --file "./select.sql"
+uv run --env-file .env python -m database_environments exec dev --file "./select.sql"
 ```
 
 The output, again:
@@ -301,7 +301,7 @@ The output, again:
 You can also run this on the ```staging``` and ```prod``` environments, but they will ask you to confirm your execution:
 
 ```
-uv run --env-file .env python -m environments exec prod --file "./select.sql"
+uv run --env-file .env python -m database_environments exec prod --file "./select.sql"
 ```
 
 ```

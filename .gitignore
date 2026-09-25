@@ -3,9 +3,11 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-# example
-example/.venv/
-example/uv.lock
+#nx
+.nx/
+
+#example
+example/
 
 # C extensions
 *.so
@@ -222,7 +224,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
 
 #Terraform
 .terraform/

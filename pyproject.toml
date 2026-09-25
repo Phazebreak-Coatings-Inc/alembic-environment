@@ -1,12 +1,13 @@
 [project]
 name = "alembic-environment"
-version = "0.2.5"
+version = "0.3.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
     "copier-template>=0.1.10",
+    "logfire>=5.1.1",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
 ]
@@ -60,7 +61,7 @@ select = [
 members = [
     "template/database/models",
     "template/database/migrations",
-    "template/database/environments",
+    "template/database/database_environments",
     "template/database/database_util",
     "template/database/database_core",
 ]
@@ -72,7 +73,7 @@ database_util = { workspace = true }
 database_core = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
-environments = { workspace = true }
+database_environments = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -83,7 +84,7 @@ dev = [
     "sqlmodel>=0.0.38",
     "models",
     "migrations",
-    "environments",
+    "database_environments",
     "database_util",
     "database_core",
     "pytest-alembic>=0.12.1",
@@ -94,6 +95,7 @@ dev = [
     "tomlkit>=0.15.0",
     "sqlacodegen>=4.0.3",
     "inflection>=0.5.1",
+    "logfire[sqlalchemy]>=5.1.1",
     "copier>=9.15.1",
     "typer>=0.26.6",
     "sqlglot>=30.12.0",

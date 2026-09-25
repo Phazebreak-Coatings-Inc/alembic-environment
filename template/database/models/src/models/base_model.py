@@ -1,6 +1,6 @@
 from abc import ABC
-from typing import Self
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import SQLModel
+
 
 class SQLModelBase(SQLModel, ABC): ...

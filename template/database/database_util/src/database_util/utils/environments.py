@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import time
 from abc import ABC, abstractmethod
@@ -18,15 +19,14 @@ import typer
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
+from copier_template.util import TerraformOutput, TerraformOutputError
 from pydantic import (
-    BaseModel,
     BeforeValidator,
     PrivateAttr,
-    SecretStr,
-    model_validator,
+    Secret,
     validate_call,
 )
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL, create_engine, text
 
 from .paths import (
@@ -169,21 +169,6 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
-class TerraformOutputError(Exception): ...
-
-
-class TerraformOutput(BaseModel):
-    value: str | int | SecretStr
-    sensitive: bool
-    type: str
-
-    @model_validator(mode="after")
-    def wrap_sensitive(self):
-        if self.sensitive and not isinstance(self.value, SecretStr):
-            self.value = SecretStr(str(self.value))
-        return self
-
-
 class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     BaseDatabaseSettings
 ):
@@ -214,6 +199,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         return self.plan_file.exists()
 
     def tf(self, cmd: str, check: bool = True, silent: bool = False, **kwargs):
+        from .telemetry import read_project_name
         from .typer_utils import sh
 
         return sh(
@@ -222,6 +208,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             check=check,
             silent=silent,
             text=True,
+            env={"TF_VAR_project_name": read_project_name(), **os.environ},
             **kwargs,
         )
 
@@ -282,7 +269,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         if key not in outputs:
             available = json.dumps(
                 {
-                    k: "**********" if isinstance(v.value, SecretStr) else v.value
+                    k: "**********" if isinstance(v.value, Secret) else v.value
                     for k, v in outputs.items()
                 },
                 indent=2,
@@ -294,7 +281,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         out = outputs[key]
         return (
             out.value.get_secret_value()
-            if isinstance(out.value, SecretStr)
+            if isinstance(out.value, Secret)
             else out.value
         )
 
@@ -419,12 +406,13 @@ migration_database = migration_settings.temp
 class DevDatabaseSettings(BaseDatabaseSettings):
     def start(self):
         from .typer_utils import require_docker, run_steps, sh
+
         run_steps(
             fns=[
                 require_docker,
-                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
+                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True),
             ],
-            label="Starting dev database"
+            label="Starting dev database",
         )
 
     def down(self):
@@ -532,6 +520,8 @@ def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
 
 
 class AlembicSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="ALEMBIC_")
+
     env: DatabaseEnvironment = "dev"
     auto_seed: bool = True
 
