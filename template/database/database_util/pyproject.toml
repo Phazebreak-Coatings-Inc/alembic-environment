@@ -7,6 +7,7 @@ dependencies = [
     "database_core",
     "alembic>=1.18.4",
     "inflection>=0.5.1",
+    "logfire[sqlalchemy]>=5.1.1",
     "psycopg[binary]>=3.3.4",
     "pydantic>=2.0",
     "pydantic-settings>=2.14.1",

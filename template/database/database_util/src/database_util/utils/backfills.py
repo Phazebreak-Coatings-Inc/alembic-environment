@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import get_type_hints
 
+import logfire
 import typer
 from alembic import op
 from pydantic import validate_call
@@ -65,7 +66,8 @@ def run_backfill(rev: str) -> None:
         return
     with Session(bind=op.get_bind()) as session:
         for fn in fns:
-            fn(session)
+            with logfire.span("backfill {backfill}", backfill=fn.__name__, rev=rev):
+                fn(session)
         session.flush()
 
 
