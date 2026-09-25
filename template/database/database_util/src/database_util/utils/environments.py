@@ -19,12 +19,11 @@ import typer
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
+from copier_template.util import TerraformOutput, TerraformOutputError
 from pydantic import (
-    BaseModel,
     BeforeValidator,
     PrivateAttr,
-    SecretStr,
-    model_validator,
+    Secret,
     validate_call,
 )
 from pydantic_settings import BaseSettings
@@ -170,21 +169,6 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
-class TerraformOutputError(Exception): ...
-
-
-class TerraformOutput(BaseModel):
-    value: str | int | SecretStr
-    sensitive: bool
-    type: str
-
-    @model_validator(mode="after")
-    def wrap_sensitive(self):
-        if self.sensitive and not isinstance(self.value, SecretStr):
-            self.value = SecretStr(str(self.value))
-        return self
-
-
 class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     BaseDatabaseSettings
 ):
@@ -285,7 +269,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         if key not in outputs:
             available = json.dumps(
                 {
-                    k: "**********" if isinstance(v.value, SecretStr) else v.value
+                    k: "**********" if isinstance(v.value, Secret) else v.value
                     for k, v in outputs.items()
                 },
                 indent=2,
@@ -297,7 +281,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         out = outputs[key]
         return (
             out.value.get_secret_value()
-            if isinstance(out.value, SecretStr)
+            if isinstance(out.value, Secret)
             else out.value
         )
 
