@@ -6,8 +6,8 @@ requires-python = ">=3.14.5"
 members = [
     "alembic-environment",
     "database-core",
+    "database-environments",
     "database-util",
-    "environments",
     "migrations",
     "models",
 ]
@@ -28,7 +28,7 @@ wheels = [
 
 [[package]]
 name = "alembic-environment"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "copier" },
@@ -43,9 +43,9 @@ dev = [
     { name = "alembic" },
     { name = "copier" },
     { name = "database-core" },
+    { name = "database-environments" },
     { name = "database-util" },
     { name = "debugpy" },
-    { name = "environments" },
     { name = "inflection" },
     { name = "logfire", extra = ["sqlalchemy"] },
     { name = "migrations" },
@@ -81,9 +81,9 @@ dev = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "copier", specifier = ">=9.15.1" },
     { name = "database-core", editable = "template/database/database_core" },
+    { name = "database-environments", editable = "template/database/database_environments" },
     { name = "database-util", editable = "template/database/database_util" },
     { name = "debugpy", specifier = ">=1.8.21" },
-    { name = "environments", editable = "template/database/environments" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "logfire", extras = ["sqlalchemy"], specifier = ">=5.1.1" },
     { name = "migrations", editable = "template/database/migrations" },
@@ -455,11 +455,23 @@ dependencies = [
 requires-dist = [{ name = "database-util", editable = "template/database/database_util" }]
 
 [[package]]
+name = "database-environments"
+version = "0.1.0"
+source = { editable = "template/database/database_environments" }
+dependencies = [
+    { name = "database-util" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "database-util", editable = "template/database/database_util" }]
+
+[[package]]
 name = "database-util"
 version = "0.1.0"
 source = { editable = "template/database/database_util" }
 dependencies = [
     { name = "alembic" },
+    { name = "copier-template" },
     { name = "database-core" },
     { name = "inflection" },
     { name = "logfire", extra = ["sqlalchemy"] },
@@ -477,6 +489,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
+    { name = "copier-template", git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019" },
     { name = "database-core", editable = "template/database/database_core" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "logfire", extras = ["sqlalchemy"], specifier = ">=5.1.1" },
@@ -541,17 +554,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/c3/10/d3ace6204a16ad24d
 wheels = [
     { url = "https://files.pythonhosted.org/packages/40/fd/f139b1ffdd06a06c6a2e3e542fa88963b59cb6165fd572d1220e901e288f/editor-2.0.1-py3-none-any.whl", hash = "sha256:96277ffb0c529d9b54f0c10bff4bd39d23ab1298504424232319b1a26b41240a", size = 4699, upload-time = "2026-09-19T14:28:58.753Z" },
 ]
-
-[[package]]
-name = "environments"
-version = "0.1.0"
-source = { editable = "template/database/environments" }
-dependencies = [
-    { name = "database-util" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "database-util", editable = "template/database/database_util" }]
 
 [[package]]
 name = "executing"
