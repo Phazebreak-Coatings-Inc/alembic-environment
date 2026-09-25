@@ -12,9 +12,15 @@ from ...utils import (
     StagingDatabaseSettings,
     e,
     get_database_setting,
+    setup_telemetry,
 )
 
 app = typer.Typer()
+
+
+@app.callback()
+def callback():
+    setup_telemetry()
 
 
 @app.command(help="Starts the database cluster for a specific environment.")

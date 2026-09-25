@@ -10,10 +10,16 @@ from ...utils import (
     SQLReverseGenerator,
     e,
     repair_model_init,
+    setup_telemetry,
 )
 from ..migrations.app import migrate
 
 app = Typer(pretty_exceptions_show_locals=False)
+
+
+@app.callback()
+def callback():
+    setup_telemetry()
 
 
 @app.command(help=f"Create models from {TABLES_SQL}")

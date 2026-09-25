@@ -25,6 +25,7 @@ from ...utils import (
     get_database_setting,
     git_bot,
     latest_rev,
+    setup_telemetry,
     sh,
     write_backfill_stub,
 )
@@ -32,6 +33,11 @@ from ...utils import migration_database as mdb
 from ...utils import migration_settings as ms
 
 app = typer.Typer()
+
+
+@app.callback()
+def callback():
+    setup_telemetry()
 
 
 @app.command(
