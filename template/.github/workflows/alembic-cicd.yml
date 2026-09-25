@@ -3,6 +3,9 @@ name: alembic-cicd
 on:
   push:
 
+env:
+  LOGFIRE_TOKEN: ${{ secrets.LOGFIRE_TOKEN }}
+
 concurrency:
   group: alembic-cicd-${{ github.ref }}
   cancel-in-progress: true
