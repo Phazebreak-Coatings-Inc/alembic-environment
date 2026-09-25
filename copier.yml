@@ -28,5 +28,5 @@ _exclude:
   - "override.tf.json"
   - "*_override.tf"
   - "*_override.tf.json"
-  - "/database/environments/clusters/modules"
+  - "/database/database_environments/clusters/modules"
   - "/database/migrations/src/migrations/versions/*"

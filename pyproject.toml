@@ -61,7 +61,7 @@ select = [
 members = [
     "template/database/models",
     "template/database/migrations",
-    "template/database/environments",
+    "template/database/database_environments",
     "template/database/database_util",
     "template/database/database_core",
 ]
@@ -73,7 +73,7 @@ database_util = { workspace = true }
 database_core = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
-environments = { workspace = true }
+database_environments = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -84,7 +84,7 @@ dev = [
     "sqlmodel>=0.0.38",
     "models",
     "migrations",
-    "environments",
+    "database_environments",
     "database_util",
     "database_core",
     "pytest-alembic>=0.12.1",

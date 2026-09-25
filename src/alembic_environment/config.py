@@ -20,7 +20,7 @@ WORKSPACE: dict[str, str] = {
     "database_util": "database/database_util",
     "models": "database/models",
     "migrations": "database/migrations",
-    "environments": "database/environments",
+    "database_environments": "database/database_environments",
 }
 """Workspace members to add to the target pyproject.
 
