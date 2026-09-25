@@ -33,6 +33,7 @@ source = { editable = "." }
 dependencies = [
     { name = "copier" },
     { name = "copier-template" },
+    { name = "logfire" },
     { name = "tomlkit" },
     { name = "typer" },
 ]
@@ -70,6 +71,7 @@ docs = [
 requires-dist = [
     { name = "copier", specifier = ">=9.15.1" },
     { name = "copier-template", git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019" },
+    { name = "logfire", specifier = ">=5.1.1" },
     { name = "tomlkit", specifier = ">=0.15.0" },
     { name = "typer", specifier = ">=0.26.6" },
 ]

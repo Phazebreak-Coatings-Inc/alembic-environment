@@ -1,12 +1,13 @@
 [project]
 name = "alembic-environment"
-version = "0.4.0"
+version = "0.3.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
     "copier-template>=0.1.10",
+    "logfire>=5.1.1",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
 ]
