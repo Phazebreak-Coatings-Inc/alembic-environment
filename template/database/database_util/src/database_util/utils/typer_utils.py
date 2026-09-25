@@ -1,4 +1,3 @@
-import os
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -11,7 +10,7 @@ from pydantic import BeforeValidator, validate_call
 
 from .environments import DatabaseEnvironment, Revision, alembic_env
 from .paths import TESTS_MIGRATIONS
-from .telemetry import setup_telemetry, trace_env
+from .telemetry import trace_env
 
 RevisionOption = Annotated[
     Revision, typer.Option("-r", "--revision", help="Which alembic revision to target.")
@@ -47,7 +46,7 @@ def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
     sh(
         f"alembic {cmd}",
         check=True,
-        env={**os.environ, "ALEMBIC_ENV": env},
+        env={"ALEMBIC_ENV": env, **trace_env()},
     )
 
 
@@ -74,9 +73,9 @@ def alembic_test(typ: TestType = "all", throw: bool = False):
 
 
 def alembic_check():
-    sh("alembic upgrade head")
+    alembic("upgrade head", "mig")
     try:
-        sh("alembic check", check=True)
+        alembic("check", "mig")
     except subprocess.CalledProcessError as e:
         raise typer.Exit(e.returncode) from None
 
@@ -85,12 +84,9 @@ def alembic_migrate(message: str = ""):
     from .environments import alembic_heads
 
     if len(alembic_heads()) > 1:
-        sh('alembic merge -m "merge heads" heads')
-    sh("alembic upgrade head", check=True)
-    sh(
-        f'alembic revision --autogenerate -m "{message or "auto"}"',
-        check=True,
-    )
+        alembic('merge -m "merge heads" heads', "mig")
+    alembic("upgrade head", "mig")
+    alembic(f'revision --autogenerate -m "{message or "auto"}"', "mig")
 
 
 class DockerUnavailable(Exception): ...

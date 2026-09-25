@@ -26,7 +26,7 @@ from pydantic import (
     Secret,
     validate_call,
 )
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL, create_engine, text
 
 from .paths import (
@@ -520,6 +520,8 @@ def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
 
 
 class AlembicSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="ALEMBIC_")
+
     env: DatabaseEnvironment = "dev"
     auto_seed: bool = True
 
