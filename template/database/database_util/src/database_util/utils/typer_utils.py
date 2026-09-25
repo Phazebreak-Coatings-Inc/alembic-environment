@@ -124,7 +124,9 @@ def alembic_migrate(message: str = ""):
         check=True,
     )
 
+
 class DockerUnavailable(Exception): ...
+
 
 def require_docker() -> None:
     r = sh("docker info", check=False, silent=True)
@@ -133,5 +135,3 @@ def require_docker() -> None:
             "Docker isn't available - is Docker Desktop running?\n"
             f"{(r.stderr or r.stdout or '').strip()}"
         )
-
-

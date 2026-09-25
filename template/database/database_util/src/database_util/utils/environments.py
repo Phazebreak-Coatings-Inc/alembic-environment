@@ -422,12 +422,13 @@ migration_database = migration_settings.temp
 class DevDatabaseSettings(BaseDatabaseSettings):
     def start(self):
         from .typer_utils import require_docker, run_steps, sh
+
         run_steps(
             fns=[
                 require_docker,
-                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
+                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True),
             ],
-            label="Starting dev database"
+            label="Starting dev database",
         )
 
     def down(self):
