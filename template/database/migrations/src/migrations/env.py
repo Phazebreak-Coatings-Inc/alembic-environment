@@ -1,9 +1,12 @@
 import os
 from logging.config import fileConfig
 
+import logfire
 from alembic import context
 from database_util.utils import (
+    configure_telemetry,
     get_database_setting,
+    inherited_trace,
     migration_settings,
 )
 from sqlalchemy import engine_from_config, pool
@@ -12,6 +15,8 @@ config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+configure_telemetry()
 
 from migrations import APP_METADATA
 
@@ -77,7 +82,15 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
-if context.is_offline_mode():
-    run_migrations_offline()
-else:
-    run_migrations_online()
+with (
+    inherited_trace(),
+    logfire.span(
+        "alembic {mode}",
+        mode="offline" if context.is_offline_mode() else "online",
+        env=os.environ.get("ALEMBIC_ENV", "mig"),
+    ),
+):
+    if context.is_offline_mode():
+        run_migrations_offline()
+    else:
+        run_migrations_online()

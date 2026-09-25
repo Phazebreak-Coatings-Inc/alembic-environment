@@ -42,6 +42,7 @@ SCRIPTS: dict[str, str] = {}
 PACKAGES = [
     "copier>=9.15.1",
     "inflection>=0.5.1",
+    "logfire[sqlalchemy]>=5.1.1",
     "pytest>=9.1.1",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
