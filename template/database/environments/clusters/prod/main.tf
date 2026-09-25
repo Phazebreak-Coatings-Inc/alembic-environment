@@ -10,7 +10,7 @@ provider "digitalocean" {
 } 
 
 module "cluster" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/environments/clusters/modules/do/postgres-cluster?ref=main"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/postgres-cluster?ref=main"
   name             = "alembic-environment"
   region           = "nyc1"
   postgres_version = "18"
@@ -19,20 +19,20 @@ module "cluster" {
 }
 
 module "prod_database" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/environments/clusters/modules/do/postgres-database?ref=main"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/postgres-database?ref=main"
   cluster_id = module.cluster.id
   db_name    = "prod"
   user_name  = "prod_user"
 }
 
 module "staging_database" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/environments/clusters/modules/do/postgres-database?ref=main"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/postgres-database?ref=main"
   cluster_id = module.cluster.id
   db_name    = "staging"
   user_name  = "staging_user"
 }
 
 module "logfire" {
-  source       = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//database/environments/clusters/modules/logfire?ref=main"
+  source       = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/logfire?ref=main"
   project_name = var.project_name
 }
