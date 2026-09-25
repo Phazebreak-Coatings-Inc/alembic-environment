@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Annotated, Literal, get_type_hints
 
 import inflection
+import logfire
 import typer
 from pydantic import BeforeValidator, validate_call
 from sqlmodel import Session
@@ -154,7 +155,10 @@ def execute_seeds(
         def make_step(fn):
             def step():
                 try:
-                    with s.begin_nested():
+                    with (
+                        logfire.span("seed {seed}", seed=fn.__name__, env=env),
+                        s.begin_nested(),
+                    ):
                         fn(s)
                 except Exception as e:
                     errors.append((fn.__name__, e))

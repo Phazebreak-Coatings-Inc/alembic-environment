@@ -1,6 +1,7 @@
 from pathlib import Path
 
 DIR_DATABASE = Path(__file__).parent.parent.parent.parent.parent
+ROOT_PYPROJECT = DIR_DATABASE.parent / "pyproject.toml"
 WS_ENVIRONMENTS = DIR_DATABASE / "environments"
 WS_MIGRATIONS = DIR_DATABASE / "migrations"
 WS_MODELS = DIR_DATABASE / "models"

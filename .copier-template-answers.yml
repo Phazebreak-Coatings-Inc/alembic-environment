@@ -1,5 +1,5 @@
 # managed by copier-template, do not edit
-_commit: v0.1.10.post2
+_commit: v0.1.11
 _src_path: gh:Phazebreak-Coatings-Inc/copier-template
 github_repo: Phazebreak-Coatings-Inc/alembic-environment
 project_name: alembic-environment

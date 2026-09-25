@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import time
 from abc import ABC, abstractmethod
@@ -198,6 +199,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         return self.plan_file.exists()
 
     def tf(self, cmd: str, check: bool = True, silent: bool = False, **kwargs):
+        from .telemetry import read_project_name
         from .typer_utils import sh
 
         return sh(
@@ -206,6 +208,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             check=check,
             silent=silent,
             text=True,
+            env={"TF_VAR_project_name": read_project_name(), **os.environ},
             **kwargs,
         )
 
@@ -403,12 +406,13 @@ migration_database = migration_settings.temp
 class DevDatabaseSettings(BaseDatabaseSettings):
     def start(self):
         from .typer_utils import require_docker, run_steps, sh
+
         run_steps(
             fns=[
                 require_docker,
-                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True)
+                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True),
             ],
-            label="Starting dev database"
+            label="Starting dev database",
         )
 
     def down(self):
