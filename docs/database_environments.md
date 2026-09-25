@@ -60,27 +60,34 @@ Token for app.terraform.io:
 
 Enter the token you just created.
 
-After, refer to the ```./.env.api``` for entering the following environment variables:
+After, add the following to ```./.env``` at your project root:
 
 ```
 TF_CLOUD_ORGANIZATION="Your Hashicorp organization here"
 TF_WORKSPACE="Your project name here"
 ```
 
+The CLI runs Terraform on your machine and passes it values from ```.env```. Set the workspace's execution mode to **Local** in HCP Terraform. In Remote mode the plan runs on HCP's servers and never sees your ```.env```.
+
 ### Setting Up ```prod``` and ```staging```
 
 First, we'll want to create a Personal Access Token for Digital Ocean. Please visit the following documentation for steps to retrieve it [here](https://docs.digitalocean.com/reference/api/create-personal-access-token/).
 
-Once you have your token, create and open your env file at ```./.env```:
+Then create a Logfire API key with project and token management scopes. See [logfire.md](logfire.md).
+
+Add both to ```./.env```:
 
 ```
-TF_VAR_do_token="{{Your digital ocean token here}}"
+DO_TOKEN="{{Your digital ocean token here}}"
+LOGFIRE_API_KEY="{{Your Logfire API key here}}"
 ```
 
-Once you have listed your token under ```TF_VAR_do_token```, go ahead and terraform your database environments using the following command:
+```TF_VAR_do_token``` is still accepted in place of ```DO_TOKEN```.
+
+The CLI reads ```.env``` itself and stops before Terraform runs if either value is missing. Terraform your database environments with:
 
 ```
-uv run --env-file .env python -m database_environments up prod
+uv run python -m database_environments up prod
 ```
 
 It will alert us that we're successfully connected to the cloud:
@@ -185,7 +192,7 @@ Changes to Outputs:
 
 The database cluster can up to 10 minutes to provision. Don't cancel the current command.
 
-If you want to destroy your infrastructure, run ```uv run --env-file .env python -m database_environments down prod --destroy```.
+If you want to destroy your infrastructure, run ```uv run python -m database_environments down prod --destroy```.
 
 ## Applying Migrations
 
@@ -195,7 +202,7 @@ If you want to apply a migration to prod or staging there are two methods:
 
 We'll use ```migrations``` to apply a migration to a specific environment.
 
-```uv run --env-file .env python -m migrations apply prod```
+```uv run python -m migrations apply prod```
 
 The following output:
 
@@ -211,7 +218,7 @@ L.
 
 We can use the ```--startup``` flag to call startup steps on whichever environment we want.
 
-```uv run --env-file .env python -m database_environments up --startup```
+```uv run python -m database_environments up --startup```
 
 !!! Warning
     
@@ -264,7 +271,7 @@ engine = get_database_setting(env).engine
 
 If you want to query a database environment directly, use the following:
 
-```uv run --env-file .env python -m database_environments exec```
+```uv run python -m database_environments exec```
 
 We can either feed the command SQL or the name of a ```.sql``` file.
 
@@ -275,7 +282,7 @@ SELECT 1
 ```
 
 ```
-uv run --env-file .env python -m database_environments exec dev --sql "SELECT 1"
+uv run python -m database_environments exec dev --sql "SELECT 1"
 ```
 
 The output:
@@ -288,7 +295,7 @@ The output:
 We can do the same thing by making a ```.sql``` file called ```select.sql``` and putting ```SELECT 1``` there.
 
 ```
-uv run --env-file .env python -m database_environments exec dev --file "./select.sql"
+uv run python -m database_environments exec dev --file "./select.sql"
 ```
 
 The output, again:
@@ -301,7 +308,7 @@ The output, again:
 You can also run this on the ```staging``` and ```prod``` environments, but they will ask you to confirm your execution:
 
 ```
-uv run --env-file .env python -m database_environments exec prod --file "./select.sql"
+uv run python -m database_environments exec prod --file "./select.sql"
 ```
 
 ```

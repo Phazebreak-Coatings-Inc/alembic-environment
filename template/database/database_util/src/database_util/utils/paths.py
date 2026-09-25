@@ -1,7 +1,10 @@
 from pathlib import Path
 
 DIR_DATABASE = Path(__file__).parent.parent.parent.parent.parent
-ROOT_PYPROJECT = DIR_DATABASE.parent / "pyproject.toml"
+DIR_ROOT = DIR_DATABASE.parent
+ROOT_PYPROJECT = DIR_ROOT / "pyproject.toml"
+ROOT_ENV = DIR_ROOT / ".env"
+ALEMBIC_INI = DIR_ROOT / "alembic.ini"
 WS_ENVIRONMENTS = DIR_DATABASE / "database_environments"
 WS_MIGRATIONS = DIR_DATABASE / "migrations"
 WS_MODELS = DIR_DATABASE / "models"

@@ -9,7 +9,7 @@ from copier_template.util import cli_exception_handler, sh
 from pydantic import BeforeValidator, validate_call
 
 from .environments import DatabaseEnvironment, Revision, alembic_env
-from .paths import TESTS_MIGRATIONS
+from .paths import DIR_ROOT, TESTS_MIGRATIONS
 from .telemetry import trace_env
 
 RevisionOption = Annotated[
@@ -46,6 +46,7 @@ def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
     sh(
         f"alembic {cmd}",
         check=True,
+        cwd=DIR_ROOT,
         env={"ALEMBIC_ENV": env, **trace_env()},
     )
 

@@ -1,5 +1,4 @@
 import json
-import os
 import subprocess
 import time
 from abc import ABC, abstractmethod
@@ -21,7 +20,9 @@ from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
 from copier_template.util import TerraformOutput, TerraformOutputError
 from pydantic import (
+    AliasChoices,
     BeforeValidator,
+    Field,
     PrivateAttr,
     Secret,
     validate_call,
@@ -30,8 +31,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL, create_engine, text
 
 from .paths import (
+    ALEMBIC_INI,
     ENV_DEV_COMPOSE,
     PKG_PROD,
+    ROOT_ENV,
 )
 
 ENVS = ["dev", "staging", "prod", "mig"]
@@ -169,6 +172,71 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
+def TFVar(tf: str, description: str = "", *aliases: str) -> Any:
+    return Field(
+        default="",
+        description=description,
+        validation_alias=AliasChoices(*aliases) if aliases else None,
+        json_schema_extra={"tf": tf},
+    )
+
+
+def TFSecret(tf: str, description: str = "", *aliases: str) -> Any:
+    return Field(
+        default="",
+        description=description,
+        repr=False,
+        validation_alias=AliasChoices(*aliases) if aliases else None,
+        json_schema_extra={"tf": tf},
+    )
+
+
+class CLISettings(BaseSettings):
+    """Deploy time configuration read from the project .env. Never used at runtime."""
+
+    model_config = SettingsConfigDict(
+        env_file=ROOT_ENV,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    tf_cloud_organization: str = TFVar(
+        "TF_CLOUD_ORGANIZATION",
+        "HCP Terraform organization that owns the workspace.",
+    )
+    tf_workspace: str = TFVar(
+        "TF_WORKSPACE",
+        "HCP Terraform workspace for the database cluster.",
+    )
+    do_token: str = TFSecret(
+        "TF_VAR_do_token",
+        "DigitalOcean personal access token.",
+        "DO_TOKEN",
+        "TF_VAR_DO_TOKEN",
+    )
+    logfire_api_key: str = TFSecret(
+        "LOGFIRE_API_KEY",
+        "Logfire API key. Lets Terraform create the project and write token.",
+    )
+
+    def require(self, *names: str) -> None:
+        if missing := [n.upper() for n in names if not getattr(self, n)]:
+            raise ValueError(f"Missing {', '.join(missing)} in {ROOT_ENV}")
+
+    def tf_env(self) -> dict[str, str]:
+        from .telemetry import read_project_name
+
+        return {
+            **{
+                str(key): value
+                for name, f in type(self).model_fields.items()
+                if (key := (f.json_schema_extra or {}).get("tf"))
+                and (value := getattr(self, name))
+            },
+            "TF_VAR_project_name": read_project_name(),
+        }
+
+
 class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     BaseDatabaseSettings
 ):
@@ -199,7 +267,6 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
         return self.plan_file.exists()
 
     def tf(self, cmd: str, check: bool = True, silent: bool = False, **kwargs):
-        from .telemetry import read_project_name
         from .typer_utils import sh
 
         return sh(
@@ -208,11 +275,12 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             check=check,
             silent=silent,
             text=True,
-            env={"TF_VAR_project_name": read_project_name(), **os.environ},
+            env=CLISettings().tf_env(),
             **kwargs,
         )
 
     def plan(self) -> subprocess.CompletedProcess:
+        CLISettings().require("do_token", "logfire_api_key")
         self.tf("init")
         return self.tf("plan -out main.tfplan")
 
@@ -534,7 +602,9 @@ class RevisionError(Exception): ...
 
 
 def script_dir() -> ScriptDirectory:
-    return ScriptDirectory.from_config(Config("alembic.ini"))
+    if not ALEMBIC_INI.is_file():
+        raise FileNotFoundError(f"Missing {ALEMBIC_INI}")
+    return ScriptDirectory.from_config(Config(str(ALEMBIC_INI)))
 
 
 def alembic_heads() -> list[str]:
