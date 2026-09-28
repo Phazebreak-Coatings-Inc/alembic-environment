@@ -200,7 +200,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
-DIR_DATABASE = Path(__file__).parent.parent.parent.parent.parent
+DIR_DATABASE = Path(__file__).parent.parent.parent.parent
 DIR_ROOT = DIR_DATABASE.parent
 ROOT_ENV = DIR_ROOT / ".env"
 
