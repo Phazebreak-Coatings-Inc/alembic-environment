@@ -84,6 +84,7 @@ database_core = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
 database_environments = { workspace = true }
+copier-template = { path = "../copier-template", editable = true }
 
 [dependency-groups]
 dev = [
