@@ -13,12 +13,11 @@ from typing import (
     TypedDict,
     cast,
 )
-
 import typer
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
-from copier_template.util import TerraformOutput, TerraformOutputError
+from copier_template.util import TerraformOutput, TerraformOutputError, TFVar, TFSecret
 from pydantic import (
     AliasChoices,
     BeforeValidator,
@@ -170,25 +169,6 @@ class BaseDatabaseSettings(ABC, BaseSettings):
                 yield None
         finally:
             self.down()
-
-
-def TFVar(tf: str, description: str = "", *aliases: str) -> Any:
-    return Field(
-        default="",
-        description=description,
-        validation_alias=AliasChoices(*aliases) if aliases else None,
-        json_schema_extra={"tf": tf},
-    )
-
-
-def TFSecret(tf: str, description: str = "", *aliases: str) -> Any:
-    return Field(
-        default="",
-        description=description,
-        repr=False,
-        validation_alias=AliasChoices(*aliases) if aliases else None,
-        json_schema_extra={"tf": tf},
-    )
 
 
 class CLISettings(BaseSettings):
