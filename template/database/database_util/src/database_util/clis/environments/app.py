@@ -39,16 +39,14 @@ def up(
         typer.Option(
             "-r",
             "--reapply",
-            help="If enabled, will replan and reapply if already provisioned.",
+            help="No longer needed: terraformed environments always re-apply on up.",
         ),
     ] = False,
 ):
 
     s = get_database_environment(env)
-    if reapply:
-        if not isinstance(s, TerraformedDatabaseEnvironment):
-            raise ValueError("Can't reapply against a non-terraformed database.")
-        s.apply()
+    if reapply and not isinstance(s, TerraformedDatabaseEnvironment):
+        raise ValueError("Can't reapply against a non-terraformed database.")
     s.up(startup)
 
 

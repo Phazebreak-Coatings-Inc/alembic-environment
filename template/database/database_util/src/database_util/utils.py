@@ -336,6 +336,18 @@ class TerraformedDatabaseEnvironment(BaseDatabaseEnvironment):
             self._terraform = None
             self._settings = None
 
+    def up(self, startup: bool = False) -> None:
+        try:
+            self.ping()
+            reachable = True
+        except Exception:
+            reachable = False
+        self.apply()
+        if not reachable:
+            self.ping(attempts=60, verbose=True)
+        if startup or not reachable:
+            run_steps(fns=self.up_steps(), label="Running startup steps...")
+
     def test(self) -> bool:
         try:
             self.ping()

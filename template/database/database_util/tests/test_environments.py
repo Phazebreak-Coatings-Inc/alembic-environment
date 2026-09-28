@@ -144,3 +144,37 @@ class TestTerraformedEnvironment:
         assert prod.settings.database_name == "prod"
         assert sum(c.startswith("terraform output") for c in cmds) == 1
         assert sum(c.startswith("terraform output") for c, _ in terraform) == 2
+
+
+class TestTerraformedUp:
+    @pytest.fixture
+    def calls(self, monkeypatch, prod):
+        calls: list[str] = []
+        monkeypatch.setattr(prod, "apply", lambda: calls.append("apply"))
+        monkeypatch.setattr(
+            utils, "run_steps", lambda fns, label=None: calls.append("steps")
+        )
+        return calls
+
+    def test_applies_when_already_reachable(self, monkeypatch, prod, calls):
+        monkeypatch.setattr(prod, "ping", lambda **kw: calls.append("ping"))
+        prod.up()
+        assert calls == ["ping", "apply"]
+
+    def test_runs_steps_when_first_created(self, monkeypatch, prod, calls):
+        pings: list[dict] = []
+
+        def ping(**kw):
+            pings.append(kw)
+            if len(pings) == 1:
+                raise RuntimeError("unreachable")
+
+        monkeypatch.setattr(prod, "ping", ping)
+        prod.up()
+        assert calls == ["apply", "steps"]
+        assert pings[1]["attempts"] == 60
+
+    def test_startup_forces_steps(self, monkeypatch, prod, calls):
+        monkeypatch.setattr(prod, "ping", lambda **kw: calls.append("ping"))
+        prod.up(startup=True)
+        assert calls == ["ping", "apply", "steps"]
