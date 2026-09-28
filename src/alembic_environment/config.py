@@ -46,6 +46,11 @@ SCRIPTS = {
 """
 
 PACKAGES = [
+
+]
+"""The dev packages that should be added to the target pyproject."""
+
+DEPENDENCIES: list[str] = [
     "alembic>=1.18.4",
     "sqlalchemy>=2.0.50",
     "sqlmodel>=0.0.38",
@@ -61,7 +66,4 @@ PACKAGES = [
     "typer>=0.26.6",
     "sqlglot>=30.12.0",
 ]
-"""The dev packages that should be added to the target pyproject."""
-
-DEPENDENCIES: list[str] = []
 """The runtime packages that should be added to the target pyproject."""
