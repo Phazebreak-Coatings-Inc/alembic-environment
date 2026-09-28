@@ -18,12 +18,13 @@ import typer
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
-from copier_template.util import TerraformOutput, TerraformOutputError, TFSecret, TFVar
+from copier_template.util import TerraformOutput, TerraformOutputError, TFSecret, TFVar, TFSettingsMixin
 from pydantic import (
     BeforeValidator,
     PrivateAttr,
     Secret,
     validate_call,
+    SecretStr
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL, create_engine, text
@@ -34,6 +35,7 @@ from .paths import (
     PKG_PROD,
     ROOT_ENV,
 )
+from .telemetry import read_project_name
 
 ENVS = ["dev", "staging", "prod", "mig"]
 
@@ -170,7 +172,7 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
-class CLISettings(BaseSettings):
+class CLISettings(BaseSettings, TFSettingsMixin):
     """Deploy time configuration read from the project .env. Never used at runtime."""
 
     model_config = SettingsConfigDict(
@@ -187,13 +189,13 @@ class CLISettings(BaseSettings):
         "TF_WORKSPACE",
         "HCP Terraform workspace for the database cluster.",
     )
-    do_token: str = TFSecret(
+    do_token: SecretStr | None = TFSecret(
         "TF_VAR_do_token",
         "DigitalOcean personal access token.",
         "DO_TOKEN",
         "TF_VAR_DO_TOKEN",
     )
-    logfire_api_key: str = TFSecret(
+    logfire_api_key: SecretStr | None = TFSecret(
         "LOGFIRE_API_KEY",
         "Logfire API key. Lets Terraform create the project and write token.",
     )
@@ -201,20 +203,6 @@ class CLISettings(BaseSettings):
     def require(self, *names: str) -> None:
         if missing := [n.upper() for n in names if not getattr(self, n)]:
             raise ValueError(f"Missing {', '.join(missing)} in {ROOT_ENV}")
-
-    def tf_env(self) -> dict[str, str]:
-        from .telemetry import read_project_name
-
-        return {
-            **{
-                str(key): value
-                for name, f in type(self).model_fields.items()
-                if (key := (f.json_schema_extra or {}).get("tf"))
-                and (value := getattr(self, name))
-            },
-            "TF_VAR_project_name": read_project_name(),
-        }
-
 
 class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
     BaseDatabaseSettings
@@ -254,7 +242,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             check=check,
             silent=silent,
             text=True,
-            env=CLISettings().tf_env(),
+            env=CLISettings().tf_env(TF_VAR_project_name=read_project_name())
             **kwargs,
         )
 
