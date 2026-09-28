@@ -194,6 +194,21 @@ The database cluster can up to 10 minutes to provision. Don't cancel the current
 
 If you want to destroy your infrastructure, run ```uv run python -m database_environments down prod --destroy```.
 
+### Cluster size
+
+The cluster defaults to 2 nodes of ```db-s-2vcpu-4gb``` in ```nyc1``` running Postgres 18. To change any of these, create ```database/database_environments/clusters/prod/prod.auto.tfvars```:
+
+```
+cluster_size       = "db-s-1vcpu-2gb"
+cluster_node_count = 1
+cluster_region     = "sfo3"
+postgres_version   = "18"
+```
+
+Terraform loads ```*.auto.tfvars``` automatically. Template updates never touch this file, so commit it with your project.
+
+Run ```up prod``` again to apply the change. Some changes can't be made in place: check the plan before it applies.
+
 ## Applying Migrations
 
 If you want to apply a migration to prod or staging there are two methods:

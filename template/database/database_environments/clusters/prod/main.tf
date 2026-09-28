@@ -22,10 +22,10 @@ module "cluster" {
   source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-cluster?ref=terraform-pattern"
 
   name             = var.project_name
-  region           = "nyc1"
-  postgres_version = "18"
-  size             = "db-s-2vcpu-4gb"
-  node_count       = 2
+  region           = var.cluster_region
+  postgres_version = var.postgres_version
+  size             = var.cluster_size
+  node_count       = var.cluster_node_count
 }
 
 module "prod_database" {
