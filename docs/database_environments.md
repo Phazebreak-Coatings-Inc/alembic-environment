@@ -207,7 +207,11 @@ postgres_version   = "18"
 
 Terraform loads ```*.auto.tfvars``` automatically. Template updates never touch this file, so commit it with your project.
 
-Run ```up prod``` again to apply the change. Some changes can't be made in place: check the plan before it applies.
+Run ```up prod``` again to apply the change. It applies without asking for confirmation.
+
+!!! Warning
+
+    Changing ```cluster_region``` replaces the cluster and deletes its data. Size and node count change in place. Check a Postgres major version change against DigitalOcean's upgrade rules first.
 
 ## Applying Migrations
 
