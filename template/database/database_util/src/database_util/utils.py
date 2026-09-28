@@ -34,7 +34,14 @@ from copier_template.util import (
     sh,
 )
 from logfire.propagate import attach_context, get_context
-from pydantic import BeforeValidator, PrivateAttr, Secret, SecretStr, validate_call, AliasChoices
+from pydantic import (
+    AliasChoices,
+    BeforeValidator,
+    PrivateAttr,
+    Secret,
+    SecretStr,
+    validate_call,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlacodegen.generators import SQLModelGenerator
 from sqlalchemy import URL, MetaData, create_engine, create_mock_engine, text

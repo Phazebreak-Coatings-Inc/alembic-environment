@@ -385,7 +385,7 @@ wheels = [
 
 [[package]]
 name = "copier-template"
-version = "0.1.13"
+version = "0.1.13.post1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "copier" },
@@ -395,9 +395,9 @@ dependencies = [
     { name = "tomlkit" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4a/7c/70f1dc705706e2af37bc7ee75addb97f2b9b109f2690d18b6c2a626408e7/copier_template-0.1.13.tar.gz", hash = "sha256:d6994874ef6cf02e6a35de165cee1d309f4d853bacc39307dfd5789343a476b3", size = 7182, upload-time = "2026-09-28T20:59:51.09Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5d/2a/5f56360fe955abe215a78032e20654848691df27395b946f8ab4a69cb26c/copier_template-0.1.13.post1.tar.gz", hash = "sha256:8d938d3e3f7902aceaff7683fb08912f4980835cddd4432a7385f7aa5d11feee", size = 7238, upload-time = "2026-09-28T21:10:37.746Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/32/81/aeaa08b043a89d47f02f37bb4f41661884655a0e1f718b0499196639abfa/copier_template-0.1.13-py3-none-any.whl", hash = "sha256:2ce20222b12ce065db17216eb0a23865f6fbb63ce97bf07230302235aacfe984", size = 8995, upload-time = "2026-09-28T20:59:50.086Z" },
+    { url = "https://files.pythonhosted.org/packages/88/f9/958667f38061dbc200d13696274d310c90b00fe97023b790e3551e745c34/copier_template-0.1.13.post1-py3-none-any.whl", hash = "sha256:35a2b86d050ef0d07fba1da9b79d868ee6cdef6ba97b1d865989b7d97417043a", size = 9125, upload-time = "2026-09-28T21:10:36.688Z" },
 ]
 
 [[package]]
@@ -1434,11 +1434,11 @@ wheels = [
 
 [[package]]
 name = "pyjwt"
-version = "2.15.0"
+version = "2.15.1"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/02/a5/5197bfd06417837ac079921c66fa6393f1dea3557272a263cebfef69e432/pyjwt-2.15.0.tar.gz", hash = "sha256:b11c5f9791d7bf51c2b39a81ed669f6b2dbbd669df2942f6c60167e9e3d1abe4", size = 120513, upload-time = "2026-09-23T16:56:00.689Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/ea/5194e52748b0da83d71e082d75496eaec6e58f419f5e184786ded517e6a9/pyjwt-2.15.1.tar.gz", hash = "sha256:4f259e80cdfb6b3fc18a7de51fd1ef9ec79652f25019bae68975ca2468a34df8", size = 121252, upload-time = "2026-09-28T18:40:42.598Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e8/55/40e45bf052ee8ee12a4dfd785519660f8effa7b065442b91646ec6828619/pyjwt-2.15.0-py3-none-any.whl", hash = "sha256:7a3742debf6b879e912dbb9819ceec1594be812452b78c5f2e2dfc56564954f8", size = 33680, upload-time = "2026-09-23T16:55:59.241Z" },
+    { url = "https://files.pythonhosted.org/packages/50/ca/44de4e75f8aadc457f0634be3b542815078ded46dca30efb960edeecad6e/pyjwt-2.15.1-py3-none-any.whl", hash = "sha256:42d59d631f7768a1028a64c7ff581a9bf7519804daf91fc5b6c56e30eec5e193", size = 33860, upload-time = "2026-09-28T18:40:41.429Z" },
 ]
 
 [package.optional-dependencies]
