@@ -3,7 +3,6 @@ import contextlib
 import copy
 import importlib
 import re
-import json
 import logging
 import os
 import pkgutil
@@ -12,10 +11,10 @@ import time
 import tomllib
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Annotated, Any, ClassVar, Literal, TypedDict, cast, get_type_hints
+from typing import Annotated, Any, ClassVar, Literal, cast, get_type_hints
 
 import inflection
 import logfire
@@ -26,7 +25,7 @@ from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
 from copier_template.util import (
-    TerraformOutput,
+    TerraformModule,
     TerraformOutputError,
     TFSecret,
     TFSettingsMixin,
@@ -38,8 +37,6 @@ from logfire.propagate import attach_context, get_context
 from pydantic import (
     AliasChoices,
     BeforeValidator,
-    PrivateAttr,
-    Secret,
     SecretStr,
     validate_call,
 )
@@ -84,7 +81,11 @@ DatabaseEnvironment = Annotated[
 ]
 
 
-class BaseDatabaseSettings(ABC, BaseSettings):
+class DatabaseSettings(BaseSettings):
+    """Runtime connection settings. Read from DATABASE_* environment variables."""
+
+    model_config = SettingsConfigDict(extra="ignore")
+
     database_host: str | None = "localhost"
     database_port: int | None = 5432
     database_username: str | None = None
@@ -93,17 +94,18 @@ class BaseDatabaseSettings(ABC, BaseSettings):
 
     @property
     def database_url(self) -> str:
-        return (
-            f"postgresql+psycopg://{self.database_username}:{self.database_password}"
-            f"@{self.database_host}:{self.database_port}/{self.database_name}"
-        )
+        return URL.create(
+            "postgresql+psycopg",
+            username=self.database_username,
+            password=self.database_password,
+            host=self.database_host,
+            port=self.database_port,
+            database=self.database_name,
+        ).render_as_string(hide_password=False)
 
     @property
     def engine(self):
         return create_engine(self.database_url, connect_args={"connect_timeout": 3})
-
-    @abstractmethod
-    def get_environment_str(self) -> str: ...
 
     def ping(
         self, attempts: int = 1, delay: float = 0.5, verbose: bool = False
@@ -139,6 +141,30 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             f"Database connection to {self.database_name} failed after "
             f"{attempts} attempt(s): {last}"
         ) from last
+
+
+class BaseDatabaseEnvironment(ABC):
+    """Deploy time lifecycle for one database environment. Used by the CLI only."""
+
+    @property
+    @abstractmethod
+    def settings(self) -> DatabaseSettings: ...
+
+    @abstractmethod
+    def get_environment_str(self) -> str: ...
+
+    @property
+    def database_url(self) -> str:
+        return self.settings.database_url
+
+    @property
+    def engine(self):
+        return self.settings.engine
+
+    def ping(
+        self, attempts: int = 1, delay: float = 0.5, verbose: bool = False
+    ) -> None:
+        self.settings.ping(attempts=attempts, delay=delay, verbose=verbose)
 
     def up(self, startup: bool = False) -> None:
         try:
@@ -201,6 +227,15 @@ class BaseDatabaseSettings(ABC, BaseSettings):
             self.down()
 
 
+class LocalDatabaseEnvironment(BaseDatabaseEnvironment):
+    def __init__(self, settings: DatabaseSettings):
+        self._settings = settings
+
+    @property
+    def settings(self) -> DatabaseSettings:
+        return self._settings
+
+
 DIR_DATABASE = Path(__file__).parent.parent.parent.parent
 DIR_ROOT = DIR_DATABASE.parent
 ROOT_ENV = DIR_ROOT / ".env"
@@ -250,57 +285,56 @@ def read_project_name() -> str:
     return slug or "database"
 
 
-class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
-    BaseDatabaseSettings
-):
-    __cwd__: ClassVar[Path | None] = None
-    _outputs_cache: dict[str, TerraformOutput] | None = PrivateAttr(default=None)
+class TerraformedDatabaseEnvironment(BaseDatabaseEnvironment):
+    """A database provisioned by terraform. Connection settings come from its outputs."""
 
-    @classmethod
-    def set_cwd(cls, p: Path) -> None:
-        cls.__cwd__ = p
+    name_output: ClassVar[str]
+    username_output: ClassVar[str]
+    password_output: ClassVar[str]
 
-    @classmethod
-    def get_cwd(cls) -> Path:
-        if not cls.__cwd__:
-            raise ValueError(f"Cwd for {cls.__name__} was never set")
-        p = cls.__cwd__
-        if not p.exists():
-            raise FileNotFoundError(f"Cwd for {cls.__name__} does not exist at: {p}")
-        if not p.is_dir():
-            raise TypeError(f"Cwd for {cls.__name__} must be a directory")
-        return p
+    def __init__(self, terraform_dir: Path):
+        self.terraform_dir = terraform_dir
+        self._terraform: TerraformModule | None = None
+        self._settings: DatabaseSettings | None = None
 
     @property
-    def plan_file(self) -> Path:
-        return self.get_cwd() / "main.tfplan"
+    def terraform(self) -> TerraformModule:
+        if self._terraform is None:
+            self._terraform = TerraformModule(
+                cwd=self.terraform_dir,
+                tf_vars=CLISettings().tf_env(TF_VAR_project_name=read_project_name()),
+            )
+        return self._terraform
 
-    @property
-    def planned(self) -> bool:
-        return self.plan_file.exists()
+    def get_output(self, key: str) -> Any:
+        return self.terraform.get_output(key)
 
-    def tf(self, cmd: str, check: bool = True, silent: bool = False, **kwargs):
-        return sh(
-            f"terraform {cmd}",
-            cwd=self.get_cwd(),
-            check=check,
-            silent=silent,
-            text=True,
-            env=CLISettings().tf_env(TF_VAR_project_name=read_project_name()),
+    def connection(self, username_output: str, password_output: str) -> DatabaseSettings:
+        return DatabaseSettings(
+            database_host=self.get_output("database_host"),
+            database_port=self.get_output("database_port"),
+            database_name=self.get_output(self.name_output),
+            database_username=self.get_output(username_output),
+            database_password=self.get_output(password_output),
         )
 
-    def plan(self) -> subprocess.CompletedProcess:
-        CLISettings().require("do_token", "logfire_api_key")
-        self.tf("init")
-        return self.tf("plan -out main.tfplan")
+    @property
+    def settings(self) -> DatabaseSettings:
+        if self._settings is None:
+            self._settings = self.connection(self.username_output, self.password_output)
+        return self._settings
 
-    def apply(self):
-        self.plan()
+    @property
+    def admin_settings(self) -> DatabaseSettings:
+        return self.connection("admin_username", "admin_password")
+
+    def apply(self) -> None:
+        CLISettings().require("do_token", "logfire_api_key")
         try:
-            self.tf("apply main.tfplan")
+            self.terraform.apply()
         finally:
-            self.plan_file.unlink(missing_ok=True)
-            self._outputs_cache = None
+            self._terraform = None
+            self._settings = None
 
     def test(self) -> bool:
         try:
@@ -326,91 +360,15 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             "For realsies?",
             abort=True,
         )
-        return self.tf("destroy")
-
-    @property
-    def outputs(self) -> dict[str, TerraformOutput]:
-        if self._outputs_cache is None:
-            r = self.tf("output -json -no-color", check=False, silent=True)
-            self._outputs_cache = (
-                {}
-                if r.returncode != 0 or not (r.stdout or "").strip()
-                else {
-                    k: TerraformOutput.model_validate(v)
-                    for k, v in json.loads(r.stdout).items()
-                }
-            )
-        return self._outputs_cache
-
-    def get_output(self, key: str) -> Any:
-        outputs = self.outputs
-        if key not in outputs:
-            available = json.dumps(
-                {
-                    k: "**********" if isinstance(v.value, Secret) else v.value
-                    for k, v in outputs.items()
-                },
-                indent=2,
-            )
-            raise TerraformOutputError(
-                f"No terraform output '{key}' for '{self.get_environment_str()}'. "
-                f"Available: {available or '(none - has this environment been applied?)'}"
-            )
-        out = outputs[key]
-        return (
-            out.value.get_secret_value() if isinstance(out.value, Secret) else out.value
-        )
-
-    @abstractmethod
-    def map_outputs(self) -> None: ...
-
-    def create_database_url(self, username: str, password: str) -> URL:
-        return URL.create(
-            "postgresql+psycopg",
-            username=username,
-            password=password,
-            host=self.database_host,
-            port=self.database_port,
-            database=self.database_name,
-        )
-
-    @property
-    def database_url(self) -> str:
-        self.map_outputs()
-        u = self.database_username
-        p = self.database_password
-        if u is None or p is None:
-            raise ValueError("Expected database_user and database_password")
-        return self.create_database_url(u, p).render_as_string(hide_password=False)
-
-    @property
-    def admin_engine(self):
-        from sqlalchemy import create_engine
-
-        self.map_outputs()
-        return create_engine(
-            self.create_database_url(
-                self.get_output("admin_username"), self.get_output("admin_password")
-            ),
-            connect_args={"connect_timeout": 3},
-        )
+        return self.terraform.tf("destroy")
 
     def grant(self) -> None:
-        self.map_outputs()
-        admin = URL.create(
-            "postgresql+psycopg",
-            username=self.get_output("admin_username"),
-            password=self.get_output("admin_password"),
-            host=self.database_host,
-            port=self.database_port,
-            database=self.database_name,
-        )
-        with create_engine(admin).begin() as c:
+        with self.admin_settings.engine.begin() as c:
             c.exec_driver_sql(
-                f'GRANT ALL ON SCHEMA public TO "{self.database_username}"'
+                f'GRANT ALL ON SCHEMA public TO "{self.settings.database_username}"'
             )
         typer.secho(
-            f"Ensured grant on schema public to {self.database_username}",
+            f"Ensured grant on schema public to {self.settings.database_username}",
             fg=typer.colors.GREEN,
         )
 
@@ -471,9 +429,9 @@ def require_docker() -> None:
         )
 
 
-class MigrationSettings(BaseDatabaseSettings):
+class MigrationEnvironment(LocalDatabaseEnvironment):
     def start(self):
-        m = self
+        m = self.settings
         run_steps(
             fns=[
                 require_docker,
@@ -492,7 +450,7 @@ class MigrationSettings(BaseDatabaseSettings):
         return []
 
     def down(self):
-        m = self
+        m = self.settings
         run_steps(
             fns=[
                 lambda: sh(f"docker rm -f {m.database_name}", check=True, silent=True)
@@ -503,19 +461,21 @@ class MigrationSettings(BaseDatabaseSettings):
     def destroy(self):
         return self.down()
 
-    def test(self):  # Can't really test it no? Lol
+    def test(self):
         return True
 
     def get_environment_str(self) -> str:
         return "mig"
 
 
-migration_settings = MigrationSettings(
-    database_host="127.0.0.1",
-    database_port=5431,
-    database_username="migrations",
-    database_password="migrations_password",
-    database_name="migrations",
+migration_environment = MigrationEnvironment(
+    DatabaseSettings(
+        database_host="127.0.0.1",
+        database_port=5431,
+        database_username="migrations",
+        database_password="migrations_password",
+        database_name="migrations",
+    )
 )
 WS_ENVIRONMENTS = DIR_DATABASE / "database_environments"
 PKG_CLUSTERS = WS_ENVIRONMENTS / "clusters"
@@ -523,7 +483,7 @@ PKG_DEV = PKG_CLUSTERS / "dev"
 ENV_DEV_COMPOSE = PKG_DEV / "compose.dev.yml"
 
 
-class DevDatabaseSettings(BaseDatabaseSettings):
+class DevEnvironment(LocalDatabaseEnvironment):
     def start(self):
         run_steps(
             fns=[
@@ -547,85 +507,51 @@ class DevDatabaseSettings(BaseDatabaseSettings):
         return "dev"
 
 
-dev_settings = DevDatabaseSettings(
-    database_host="127.0.0.1",
-    database_port=5432,
-    database_name="dev_db",
-    database_username="dev_user",
-    database_password="dev_password",
+dev_environment = DevEnvironment(
+    DatabaseSettings(
+        database_host="127.0.0.1",
+        database_port=5432,
+        database_name="dev_db",
+        database_username="dev_user",
+        database_password="dev_password",
+    )
 )
 
 
-class StagingOutputs(TypedDict):
-    database_host: str
-    database_port: int
-    staging_name: str
-    staging_username: str
-    staging_password: str
+class StagingEnvironment(TerraformedDatabaseEnvironment):
+    name_output = "staging_name"
+    username_output = "staging_username"
+    password_output = "staging_password"
 
-
-class StagingDatabaseSettings(TerraformedDatabaseSettings[StagingOutputs]):
     def sanitize(self): ...
 
     def stage(self): ...
-
-    def map_outputs(self):
-        self.database_host = self.get_output("database_host")
-        self.database_port = self.get_output("database_port")
-        self.database_name = self.get_output("staging_name")
-        self.database_username = self.get_output("staging_username")
-        self.database_password = self.get_output("staging_password")
 
     def get_environment_str(self) -> str:
         return "staging"
 
 
-staging_settings = StagingDatabaseSettings()
-
-
-class ProdOutputs(TypedDict):
-    database_host: str
-    database_port: int
-    prod_name: str
-    prod_username: str
-    prod_password: str
-
-
-class ProdDatabaseSettings(TerraformedDatabaseSettings[ProdOutputs]):
-    def map_outputs(self):
-        self.database_host = self.get_output("database_host")
-        self.database_port = self.get_output("database_port")
-        self.database_name = self.get_output("prod_name")
-        self.database_username = self.get_output("prod_username")
-        self.database_password = self.get_output("prod_password")
+class ProdEnvironment(TerraformedDatabaseEnvironment):
+    name_output = "prod_name"
+    username_output = "prod_username"
+    password_output = "prod_password"
 
     def get_environment_str(self) -> str:
         return "prod"
 
 
-prod_settings = ProdDatabaseSettings()
-
-DatabaseSetting = (
-    DevDatabaseSettings
-    | StagingDatabaseSettings
-    | ProdDatabaseSettings
-    | MigrationSettings
-)
-
-
 @validate_call
-def get_database_setting(env: DatabaseEnvironment) -> DatabaseSetting:
-    s = None
-    match env:
-        case "dev":
-            s = dev_settings
-        case "staging":
-            s = staging_settings
-        case "prod":
-            s = prod_settings
-        case "mig":
-            s = migration_settings
-    return s
+def get_database_environment(env: DatabaseEnvironment) -> BaseDatabaseEnvironment:
+    return {
+        "dev": dev_environment,
+        "staging": staging_environment,
+        "prod": prod_environment,
+        "mig": migration_environment,
+    }[env]
+
+
+def get_database_setting(env: DatabaseEnvironment) -> DatabaseSettings:
+    return get_database_environment(env).settings
 
 
 class AlembicSettings(BaseSettings):
@@ -723,15 +649,11 @@ def write_backfill_stub(rev: str) -> Path:
     return p
 
 
-migration_database = migration_settings.temp
-dev_database = dev_settings.temp
+migration_database = migration_environment.temp
+dev_database = dev_environment.temp
 PKG_PROD = PKG_CLUSTERS / "prod"
-
-
-StagingDatabaseSettings.set_cwd(PKG_PROD)
-
-
-ProdDatabaseSettings.set_cwd(PKG_PROD)
+staging_environment = StagingEnvironment(PKG_PROD)
+prod_environment = ProdEnvironment(PKG_PROD)
 
 
 def alembic_heads() -> list[str]:
@@ -1099,7 +1021,7 @@ class Model:
 class SQLGenerator:
     def __init__(self, dry_run: bool = False):
         g = SQLModelGenerator
-        e = migration_settings.engine
+        e = migration_environment.engine
         with migration_database():
             with e.begin() as c:
                 c.exec_driver_sql(self.tables_file.read_text())
@@ -1310,7 +1232,7 @@ class TelemetrySettings(BaseSettings):
         if self.logfire_token or self.alembic_env not in DEPLOYED_ENVS:
             return
         with contextlib.suppress(TerraformOutputError, FileNotFoundError):
-            self.logfire_token = str(prod_settings.get_output("logfire_token"))
+            self.logfire_token = str(prod_environment.get_output("logfire_token"))
 
     def setup_telemetry(self, service_name: str | None = None) -> bool:
         global _TELEMETRY_CONFIGURED
