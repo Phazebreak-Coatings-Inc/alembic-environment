@@ -214,3 +214,220 @@ def example():  # this command explicitly is not meant to update, it just doesn'
     sh('uv run pytest tests/test_example.py -m "not slow"', cwd=root)
     sh("uv run pytest --ignore=example", cwd=dst, check=False)
     typer.secho(f"Regenerated {dst}", fg=typer.colors.GREEN)
+=======
+import shutil
+from contextlib import contextmanager, nullcontext
+from pathlib import Path
+from typing import Annotated
+
+import copier
+import tomlkit
+import typer
+import yaml
+from pydantic import BeforeValidator
+from typer import Typer
+
+from copier_template.util import PyProject, cli_exception_handler, sh
+
+from .config import (
+    ANSWERS_FILE,
+    COPIER_REPO,
+    DEPENDENCIES,
+    EXAMPLE_NAME,
+    EXAMPLE_PROJECT_NAME,
+    PACKAGES,
+    SCRIPTS,
+    WORKSPACE,
+)
+
+
+def validate_template_root(p: str | Path) -> Path:
+    if isinstance(p, str):
+        p = Path(p)
+    if not (p / "copier.yml").exists():
+        typer.secho("Run from the template repo root.", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1)
+    return p
+
+
+TemplateRoot = Annotated[Path, BeforeValidator(validate_template_root)]
+
+
+def pyproject(cwd: Path) -> PyProject:
+    return PyProject(cwd=cwd)
+
+
+def prepare_pyproject(cwd: Path, project_name: str | None = None) -> PyProject:
+    return (
+        pyproject(cwd)
+        .ensure(project_name)
+        .add_workspace(WORKSPACE)
+        .add_dependencies(DEPENDENCIES)
+        .add_dependencies(PACKAGES, group="dev")
+        .add_scripts(SCRIPTS)
+        .save()
+    )
+
+
+def local_template() -> Path:
+    root = Path(__file__).resolve().parents[2]
+    if not (root / "copier.yml").exists():
+        raise typer.BadParameter(
+            "--local needs this package installed from a local template checkout "
+            "(an editable path source), not from PyPI."
+        )
+    return root
+
+
+def set_answers(cwd: Path, **values: str) -> None:
+    path = cwd / ANSWERS_FILE
+    text = path.read_text(encoding="utf-8")
+    header = "".join(f"{line}\n" for line in text.splitlines() if line.startswith("#"))
+    answers = yaml.safe_load(text)
+    answers.update(values)
+    path.write_text(header + yaml.safe_dump(answers, sort_keys=False), encoding="utf-8")
+
+
+def latest_tag(template: Path) -> str | None:
+    r = sh("git describe --tags --abbrev=0", cwd=template, silent=True, check=False)
+    return r.stdout.strip() if r.returncode == 0 else None
+
+
+@contextmanager
+def restored_answers(cwd: Path, template: Path):
+    path = cwd / ANSWERS_FILE
+    original = path.read_text(encoding="utf-8") if path.exists() else None
+    try:
+        yield
+    finally:
+        if original is not None:
+            path.write_text(original, encoding="utf-8")
+        elif path.exists():
+            values = {"_src_path": COPIER_REPO}
+            if tag := latest_tag(template):
+                values["_commit"] = tag
+            else:
+                typer.secho(
+                    f"No tag found in {template}. Set _commit in {ANSWERS_FILE} "
+                    "to a published tag before running an official update.",
+                    fg=typer.colors.YELLOW,
+                    err=True,
+                )
+            set_answers(cwd, **values)
+
+
+CwdArgument = Annotated[
+    Path, typer.Argument(help="Project directory.", resolve_path=True)
+]
+LocalOption = Annotated[
+    bool,
+    typer.Option(
+        "--local/--official",
+        help="Use the local template checkout, including uncommitted changes, instead of the published release.",
+    ),
+]
+DefaultsOption = Annotated[
+    bool,
+    typer.Option(
+        "--defaults",
+        help="Answer every question with its previous answer or default, without prompting.",
+    ),
+]
+
+app = Typer()
+
+
+@app.command(help="Hook up dependencies and workspaces correctly.")
+@cli_exception_handler
+def repair(cwd: CwdArgument = Path(".")):
+    prepare_pyproject(cwd)
+
+
+@app.command(help="Initialize a new project.")
+@cli_exception_handler
+def init(
+    dest: CwdArgument = Path("."),
+    local: LocalOption = False,
+    defaults: DefaultsOption = False,
+):
+    template = local_template() if local else None
+    pyproject(dest).ensure()
+    with restored_answers(dest, template) if template else nullcontext():
+        copier.run_copy(
+            str(template or COPIER_REPO),
+            str(dest),
+            vcs_ref="HEAD" if template else None,
+            unsafe=True,
+            answers_file=ANSWERS_FILE,
+            defaults=defaults,
+        )
+    repair(dest)
+
+
+
+@contextmanager
+def local_source(cwd: Path, template: Path):
+    path = cwd / ANSWERS_FILE
+    original = path.read_text(encoding="utf-8")
+    head = sh("git rev-parse HEAD", cwd=cwd, silent=True).stdout.strip()
+    set_answers(cwd, _src_path=str(template))
+    try:
+        sh(
+            "git -c user.name=copier-template -c user.email=copier-template@localhost "
+            "-c commit.gpgsign=false commit --no-verify -q "
+            f'-m "Temporary local template source" -- {ANSWERS_FILE}',
+            cwd=cwd,
+            silent=True,
+        )
+        yield
+    finally:
+        sh(f"git update-ref HEAD {head}", cwd=cwd, silent=True, check=False)
+        sh(f"git restore --staged -- {ANSWERS_FILE}", cwd=cwd, silent=True, check=False)
+        path.write_text(original, encoding="utf-8")
+
+
+@app.command(help="Update your existing project.")
+@cli_exception_handler
+def update(
+    cwd: CwdArgument = Path("."),
+    local: LocalOption = False,
+    defaults: DefaultsOption = False,
+):
+    template = local_template() if local else None
+    with local_source(cwd, template) if template else nullcontext():
+        copier.run_update(
+            str(cwd),
+            answers_file=ANSWERS_FILE,
+            vcs_ref="HEAD" if template else None,
+            overwrite=True,
+            conflict="inline",
+            unsafe=True,
+            skip_tasks=True,
+            defaults=defaults,
+        )
+    repair(cwd)
+
+@app.command(help="Destroy and regenerate the committed example project.", hidden=True)
+@cli_exception_handler
+def example():  # this command explicitly is not meant to update, it just doesn't work. it's already been tried.... sorry... :(
+    root = validate_template_root(Path.cwd().resolve())
+    dst = root / EXAMPLE_NAME
+
+    if dst.exists():
+        shutil.rmtree(dst)
+    dst.mkdir()
+
+    sh(
+        f"uv run python -m copier copy {root} {dst} --trust --vcs-ref=HEAD -d project_name={EXAMPLE_PROJECT_NAME} --skip-tasks"
+    )
+
+    pp = pyproject(dst).ensure(EXAMPLE_PROJECT_NAME)
+    source = tomlkit.inline_table()
+    source.update({"path": "..", "editable": True})
+    pp.table("tool", "uv", "sources")["copier-template"] = source
+    pp.save()
+    prepare_pyproject(dst, EXAMPLE_PROJECT_NAME)
+    sh("uv build --all-packages", cwd=dst)
+    sh('uv run pytest tests/test_example.py -m "not slow"', cwd=root)
+    sh("uv run pytest --ignore=example", cwd=dst, check=False)
+    typer.secho(f"Regenerated {dst}", fg=typer.colors.GREEN)
