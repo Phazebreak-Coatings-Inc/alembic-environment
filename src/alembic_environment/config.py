@@ -1,7 +1,21 @@
+EXAMPLE_PRESENT = ["alembic.ini", "database/models/tables.sql"]
+
 COPIER_REPO = "gh:Phazebreak-Coatings-Inc/alembic-environment"
+"""The repo that copier should target."""
+
 ANSWERS_FILE = ".alembic-environment-answers.yml"
+"""The actual answers file that will be saved after user-interaction. 
+
+If it has the same name as another copier-template project, your template will break.
+
+Do not edit unless also changing the value in copier.yml.
+"""
+
 EXAMPLE_NAME = "example"
-EXAMPLE_PROJECT_NAME = "example-project"
+"""This is only used for the target dir where 'uv run python -m copier_template example ends up."""
+
+EXAMPLE_PROJECT_NAME = "example_project"
+"""This is what the pyproject.toml.[project].name will be after running 'uv run python -m copier_template example'"""
 
 WORKSPACE = {
     "database_core": "database/database_core",
@@ -10,16 +24,28 @@ WORKSPACE = {
     "migrations": "database/migrations",
     "database_environments": "database/environments",
 }
+"""Workspace members to add to the target pyproject.
+
+Maps package name to its path.
+
+```python
+{"some_dependency": "./some_dependency"}
+```
+"""
 
 SCRIPTS = {
     "models": "database_util.clis.models.app:app",
     "migrations": "database_util.clis.migrations.app:app",
     "db_env": "database_util.clis.environments.app:app",
 }
+"""Will add these scripts to the target pyproject, i.e.
+
+```python
+    {"my_script": "some_dependency.__main__:my_script"}
+```
+"""
 
 PACKAGES = [
-    "skylos>=4.29.0",
-    "debugpy>=1.8.21",
     "alembic>=1.18.4",
     "sqlalchemy>=2.0.50",
     "sqlmodel>=0.0.38",
@@ -35,5 +61,7 @@ PACKAGES = [
     "typer>=0.26.6",
     "sqlglot>=30.12.0",
 ]
+"""The dev packages that should be added to the target pyproject."""
 
-EXAMPLE_PRESENT = ["alembic.ini", "database/models/tables.sql"]
+DEPENDENCIES: list[str] = []
+"""The runtime packages that should be added to the target pyproject."""
