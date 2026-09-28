@@ -6,10 +6,10 @@ import tomlkit
 import yaml
 
 from alembic_environment.config import (
+    DATABASE_UTIL_SCRIPTS,
     EXAMPLE_NAME,
     EXAMPLE_PRESENT,
     EXAMPLE_PROJECT_NAME,
-    DATABASE_UTIL_SCRIPTS,
     WORKSPACE,
 )
 

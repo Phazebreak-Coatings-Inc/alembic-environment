@@ -117,9 +117,9 @@ from models import *
 from sqlmodel import Session
 from database_core import seed
 
-@seed(['dev', 'prod'])
-def my_first_seed(session: Session) -> None: 
-    ...
+
+@seed(["dev", "prod"])
+def my_first_seed(session: Session) -> None: ...
 ```
 
 ### Running Your Seeds

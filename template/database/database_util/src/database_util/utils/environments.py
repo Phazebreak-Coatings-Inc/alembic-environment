@@ -13,15 +13,14 @@ from typing import (
     TypedDict,
     cast,
 )
+
 import typer
 from alembic.config import Config
 from alembic.script import ScriptDirectory
 from alembic.util.exc import CommandError
-from copier_template.util import TerraformOutput, TerraformOutputError, TFVar, TFSecret
+from copier_template.util import TerraformOutput, TerraformOutputError, TFSecret, TFVar
 from pydantic import (
-    AliasChoices,
     BeforeValidator,
-    Field,
     PrivateAttr,
     Secret,
     validate_call,
@@ -328,9 +327,7 @@ class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
             )
         out = outputs[key]
         return (
-            out.value.get_secret_value()
-            if isinstance(out.value, Secret)
-            else out.value
+            out.value.get_secret_value() if isinstance(out.value, Secret) else out.value
         )
 
     @abstractmethod

@@ -60,6 +60,7 @@ with step("Loading users...", "load users", count=10):
 ```python
 import logfire
 
+
 @seed(["dev"])
 def users(session: Session) -> None:
     with logfire.span("insert users"):

@@ -1,7 +1,3 @@
-from pathlib import Path
-from typing import Annotated
-
-import copier
 import shutil
 from pathlib import Path
 from typing import Annotated
@@ -9,10 +5,9 @@ from typing import Annotated
 import copier
 import tomlkit
 import typer
+from copier_template.util import PyProject, cli_exception_handler, sh
 from pydantic import BeforeValidator
 from typer import Typer
-
-from copier_template.util import PyProject, cli_exception_handler, quote, sh
 
 from .config import (
     ANSWERS_FILE,
