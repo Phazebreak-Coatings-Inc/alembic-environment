@@ -9,7 +9,7 @@ terraform {
 
 variable "project_name" {
   type        = string
-  description = "Logfire project name. Usually the root project name with a _database suffix."
+  description = "Logfire project name. Usually the root project name with a -database suffix."
 }
 
 resource "logfire_project" "this" {

@@ -8,10 +8,9 @@ from sqlmodel import Session, text
 from ...utils import (
     DryRun,
     EnvArg,
-    ProdDatabaseSettings,
-    StagingDatabaseSettings,
+    TerraformedDatabaseEnvironment,
     e,
-    get_database_setting,
+    get_database_environment,
     setup_telemetry,
 )
 
@@ -40,17 +39,14 @@ def up(
         typer.Option(
             "-r",
             "--reapply",
-            help="If enabled, will replan and reapply if already provisioned.",
+            help="No longer needed: terraformed environments always re-apply on up.",
         ),
     ] = False,
 ):
 
-    s = get_database_setting(env)  # type: ignore
-    if reapply:
-        if env == "dev":
-            raise ValueError("Can't reapply against a non-terraformed database.")
-        s: ProdDatabaseSettings | StagingDatabaseSettings
-        s.apply()
+    s = get_database_environment(env)
+    if reapply and not isinstance(s, TerraformedDatabaseEnvironment):
+        raise ValueError("Can't reapply against a non-terraformed database.")
     s.up(startup)
 
 
@@ -59,7 +55,7 @@ def up(
 def down(
     env: EnvArg, destroy: Annotated[bool, typer.Option("--destroy", "-d")] = False
 ):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
     s.down() if not destroy else s.destroy()
 
 
@@ -68,14 +64,14 @@ def down(
 def test(
     env: EnvArg,
 ):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
     s.test()
 
 
 @app.command(help="Ping a database environment.")
 @e
 def ping(env: EnvArg):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
     s.ping(verbose=True)
 
 
@@ -91,7 +87,7 @@ def exec(
     ] = None,
     dry_run: DryRun = False,
 ):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
     statement = file.read_text() if file else sql
 
     if not dry_run and env != "dev":

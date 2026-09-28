@@ -30,7 +30,7 @@ from ...utils import (
     write_backfill_stub,
 )
 from ...utils import migration_database as mdb
-from ...utils import migration_settings as ms
+from ...utils import migration_environment as ms
 
 app = typer.Typer()
 
