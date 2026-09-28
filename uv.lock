@@ -52,6 +52,7 @@ dev = [
     { name = "models" },
     { name = "psycopg", extra = ["binary"] },
     { name = "pydantic-settings" },
+    { name = "pydantic-settings-export" },
     { name = "pytest" },
     { name = "pytest-alembic" },
     { name = "ruff" },
@@ -70,7 +71,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "copier", specifier = ">=9.15.1" },
-    { name = "copier-template", git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019" },
+    { name = "copier-template", specifier = ">=0.1.12" },
     { name = "logfire", specifier = ">=5.1.1" },
     { name = "tomlkit", specifier = ">=0.15.0" },
     { name = "typer", specifier = ">=0.26.6" },
@@ -90,6 +91,7 @@ dev = [
     { name = "models", editable = "template/database/models" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
+    { name = "pydantic-settings-export", specifier = ">=1.1.3" },
     { name = "pytest", specifier = ">=9.1.1" },
     { name = "pytest-alembic", specifier = ">=0.12.1" },
     { name = "ruff", specifier = ">=0.15.15" },
@@ -383,14 +385,19 @@ wheels = [
 
 [[package]]
 name = "copier-template"
-version = "0.1.9.post1"
-source = { git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019#667690b1d8c5ae16cc648ad800dfa082204c7063" }
+version = "0.1.12"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "copier" },
     { name = "inflection" },
+    { name = "pydantic-settings" },
     { name = "pytest" },
     { name = "tomlkit" },
     { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2d/d0/e7f203556dcd90153ccf4f739a737b2c45de63b92b348804f0b97e58d6c8/copier_template-0.1.12.tar.gz", hash = "sha256:2f3eee68f6684d76b9e8044c63a4901f3debef6832a729ff0424a4b3a48872a0", size = 6278, upload-time = "2026-09-25T21:49:50.282Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/91/73/8dded79f55a674a0bd917a9e417369d1d8d36e01829d48d9c0f1bb6b2eef/copier_template-0.1.12-py3-none-any.whl", hash = "sha256:0dbbe74d58bc6f8c70c3e7affee79f4c8d6ebf2080b985788fecbb493ef61202", size = 8052, upload-time = "2026-09-25T21:49:49.364Z" },
 ]
 
 [[package]]
@@ -489,7 +496,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
-    { name = "copier-template", git = "https://github.com/Phazebreak-Coatings-Inc/copier-template?branch=019" },
+    { name = "copier-template", specifier = ">=0.1.12" },
     { name = "database-core", editable = "template/database/database_core" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "logfire", extras = ["sqlalchemy"], specifier = ">=5.1.1" },
@@ -1401,6 +1408,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/68/ca/31c57507b13119d7d3cfa1576dad2911a4861e3be07b579395f4e9d393f9/pydantic_settings-2.15.0.tar.gz", hash = "sha256:694b793e84f766ba76a90ebdefc01d0a9a045dab0382bee70393da93712ad117", size = 261253, upload-time = "2026-08-07T09:24:57.419Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/30/a4/2bffa9f8e804325a09867f0e9d30795c80ea9f8d62560bd1b6ad6220eb2f/pydantic_settings-2.15.0-py3-none-any.whl", hash = "sha256:0ba092c291c94baceb5eff768aa0d56400a457585bc0175925a5a5510303da42", size = 69413, upload-time = "2026-08-07T09:24:55.839Z" },
+]
+
+[[package]]
+name = "pydantic-settings-export"
+version = "1.1.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/96/dd/da1b80d160272d25c3f5a0bb5fb8c8db9adabc7c9c198e6962e505bc54c5/pydantic_settings_export-1.1.3.tar.gz", hash = "sha256:dba2460fd4312f161bc2569df21a326988c23f750a768821c6eefdaf298db86e", size = 138537, upload-time = "2026-06-24T23:27:44.173Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/0e/83b8cf23754e4007fb10b1889ea3871fd539485c0d7dbda8230bd470644e/pydantic_settings_export-1.1.3-py3-none-any.whl", hash = "sha256:b5b8bdd661037cf1e2c948122ccadffbad179d650dbd060bf4bd8bcee6e1e10d", size = 45686, upload-time = "2026-06-24T23:27:42.913Z" },
 ]
 
 [[package]]
