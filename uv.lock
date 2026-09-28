@@ -398,7 +398,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "copier", specifier = ">=9.15.1" },
+    { name = "copier", specifier = ">=9.18,<9.19" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "pydantic-settings", specifier = ">=2.15.0" },
     { name = "pytest", specifier = ">=9.1.1" },
