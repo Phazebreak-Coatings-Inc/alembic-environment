@@ -2,6 +2,7 @@ import ast
 import contextlib
 import copy
 import importlib
+import re
 import json
 import logging
 import os
@@ -243,9 +244,10 @@ ROOT_PYPROJECT = DIR_ROOT / "pyproject.toml"
 def read_project_name() -> str:
     try:
         name = tomllib.loads(ROOT_PYPROJECT.read_text())["project"]["name"]
-    except OSError, KeyError, tomllib.TOMLDecodeError:
+    except (OSError, KeyError, tomllib.TOMLDecodeError):
         return "database"
-    return f"{inflection.underscore(name.replace('-', '_'))}_database"
+    slug = re.sub(r"[^a-z0-9]+", "-", f"{name}-database".lower()).strip("-")
+    return slug or "database"
 
 
 class TerraformedDatabaseSettings[OutputsShape: Mapping = Mapping](
