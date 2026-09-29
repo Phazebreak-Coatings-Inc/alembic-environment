@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.14.5"
 dependencies = [
-    "database_core",
+    "database_client",
     "alembic>=1.18.4",
     "copier-template>=0.1.12",
     "inflection>=0.5.1",
@@ -24,9 +24,6 @@ dependencies = [
 models = "database_util.clis.models.app:app"
 migrations = "database_util.clis.migrations.app:app"
 db_env = "database_util.clis.environments.app:app"
-
-[tool.uv.sources]
-database_core = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.11.18,<0.12"]

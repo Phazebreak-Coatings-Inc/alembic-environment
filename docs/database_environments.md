@@ -265,9 +265,9 @@ Completed 3 steps successfully.
 If you'd like to access your infrastructure in python, do the following:
 
 ```python
-from database_core import get_database_setting
+from database_core import get_database_settings
 
-engine = get_database_setting("prod").engine
+engine = get_database_settings("prod").engine
 ```
 
 ```engine``` provides ```SQLAlchemy```'s ```Engine``` object.
@@ -278,13 +278,13 @@ You can even set which environment is running with environment variables:
 
 ```python
 import os
-from database_core import get_database_setting
+from database_core import get_database_settings
 
 env = os.environ.get("ENVIRONMENT")
-engine = get_database_setting(env).engine
+engine = get_database_settings(env).engine
 ```
 
-```get_database_setting()``` automatically validates with ```pydantic```, so if you put an invalid value, there's nothing to worry about.
+```get_database_settings()``` automatically validates with ```pydantic```, so if you put an invalid value, there's nothing to worry about.
 
 ### Querying via CLI
 

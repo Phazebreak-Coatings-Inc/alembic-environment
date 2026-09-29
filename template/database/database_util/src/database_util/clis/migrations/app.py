@@ -22,7 +22,7 @@ from ...utils import (
     e,
     execute_seeds,
     generate_seed_file,
-    get_database_setting,
+    get_database_settings,
     git_bot,
     latest_rev,
     setup_telemetry,

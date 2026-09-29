@@ -74,13 +74,13 @@ members = [
     "template/database/migrations",
     "template/database/database_environments",
     "template/database/database_util",
-    "template/database/database_core",
+    "template/database/database_client",
 ]
 exclude = ["example"]
 
 [tool.uv.sources]
 database_util = { workspace = true }
-database_core = { workspace = true }
+database_client = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
 database_environments = { workspace = true }
@@ -96,7 +96,6 @@ dev = [
     "migrations",
     "database_environments",
     "database_util",
-    "database_core",
     "pytest-alembic>=0.12.1",
     "pytest>=9.1.1",
     "pydantic-settings>=2.14.1",

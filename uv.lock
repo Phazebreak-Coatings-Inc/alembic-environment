@@ -5,7 +5,7 @@ requires-python = ">=3.14.5"
 [manifest]
 members = [
     "alembic-environment",
-    "database-core",
+    "database-client",
     "database-environments",
     "database-util",
     "migrations",
@@ -42,7 +42,6 @@ dependencies = [
 dev = [
     { name = "alembic" },
     { name = "copier" },
-    { name = "database-core" },
     { name = "database-environments" },
     { name = "database-util" },
     { name = "debugpy" },
@@ -81,7 +80,6 @@ requires-dist = [
 dev = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "copier", specifier = ">=9.15.1" },
-    { name = "database-core", editable = "template/database/database_core" },
     { name = "database-environments", editable = "template/database/database_environments" },
     { name = "database-util", editable = "template/database/database_util" },
     { name = "debugpy", specifier = ">=1.8.21" },
@@ -451,15 +449,9 @@ wheels = [
 ]
 
 [[package]]
-name = "database-core"
+name = "database-client"
 version = "0.1.0"
-source = { editable = "template/database/database_core" }
-dependencies = [
-    { name = "database-util" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "database-util", editable = "template/database/database_util" }]
+source = { editable = "template/database/database_client" }
 
 [[package]]
 name = "database-environments"
@@ -479,7 +471,7 @@ source = { editable = "template/database/database_util" }
 dependencies = [
     { name = "alembic" },
     { name = "copier-template" },
-    { name = "database-core" },
+    { name = "database-client" },
     { name = "inflection" },
     { name = "logfire", extra = ["sqlalchemy"] },
     { name = "psycopg", extra = ["binary"] },
@@ -497,7 +489,7 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "copier-template", specifier = ">=0.1.12" },
-    { name = "database-core", editable = "template/database/database_core" },
+    { name = "database-client", editable = "template/database/database_client" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "logfire", extras = ["sqlalchemy"], specifier = ">=5.1.1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },

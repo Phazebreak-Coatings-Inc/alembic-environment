@@ -53,7 +53,7 @@ BACKFILLS: BackfillRegistry = defaultdict(list)
 
 BACKFILL_TEMPLATE = """
 from sqlmodel import Session
-from database_core import backfill
+from database_util import backfill
 
 
 @backfill("{rev}")
@@ -562,7 +562,7 @@ def get_database_environment(env: DatabaseEnvironment) -> BaseDatabaseEnvironmen
     }[env]
 
 
-def get_database_setting(env: DatabaseEnvironment) -> DatabaseSettings:
+def get_database_settings(env: DatabaseEnvironment) -> DatabaseSettings:
     return get_database_environment(env).settings
 
 
@@ -785,7 +785,7 @@ SEEDS: SeedRegistry = defaultdict(list)
 REQUIRES: RequiresRegistry = {}
 SEED_TEMPLATE = """from models import *
 from sqlmodel import Session
-from database_core import seed
+from database_util import seed
 
 @seed(['{env}'])
 def {name}(session: Session) -> None:

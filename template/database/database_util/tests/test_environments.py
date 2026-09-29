@@ -11,7 +11,7 @@ from database_util.utils import (
     ProdEnvironment,
     StagingEnvironment,
     get_database_environment,
-    get_database_setting,
+    get_database_settings,
 )
 
 OUTPUTS = {
@@ -82,7 +82,7 @@ class TestLookup:
         assert isinstance(get_database_environment("prod"), ProdEnvironment)
 
     def test_setting_is_runtime_settings(self):
-        s = get_database_setting("dev")
+        s = get_database_settings("dev")
         assert type(s) is DatabaseSettings
         assert s.database_name == "dev_db"
 
