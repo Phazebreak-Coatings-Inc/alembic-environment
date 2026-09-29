@@ -16,6 +16,11 @@ from alembic_environment.config import (
 TEMPLATE_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = TEMPLATE_ROOT / EXAMPLE_NAME
 
+pytestmark = pytest.mark.skipif(
+    not (EXAMPLE / "pyproject.toml").exists(),
+    reason=f"no example at {EXAMPLE}; run the example command first",
+)
+
 
 @pytest.mark.parametrize("name,path", WORKSPACE.items())
 def test_member_is_a_package(name, path):

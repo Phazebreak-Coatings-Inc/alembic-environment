@@ -23,7 +23,7 @@ dependencies = [
 [project.scripts]
 models = "database_util.clis.models.app:app"
 migrations = "database_util.clis.migrations.app:app"
-environments = "database_util.clis.environments.app:app"
+db_env = "database_util.clis.environments.app:app"
 
 [tool.uv.sources]
 database_core = { workspace = true }
