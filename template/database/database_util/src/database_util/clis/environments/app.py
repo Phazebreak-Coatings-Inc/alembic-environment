@@ -4,6 +4,8 @@ from typing import Annotated
 
 import typer
 from sqlmodel import Session, text
+import json
+from enum import StrEnum
 
 from ...utils import (
     DryRun,
@@ -56,6 +58,8 @@ def down(
     env: EnvArg, destroy: Annotated[bool, typer.Option("--destroy", "-d")] = False
 ):
     s = get_database_environment(env)
+    if destroy and env in ['prod', 'staging']:
+        typer.confirm(f"Are you sure you want to destroy '{env}'?", abort=True)
     s.down() if not destroy else s.destroy()
 
 
@@ -120,3 +124,34 @@ def exec(
             typer.secho("Dry run - rolled back.", fg=typer.colors.YELLOW)
         else:
             ses.commit()
+
+class SettingsFormat(StrEnum):
+    env = "env"
+    json = "json"
+    url = "url"
+
+@app.command(help="Print the database connection settings for an environment.")
+@e
+def settings(
+    env: EnvArg,
+    fmt: Annotated[
+        SettingsFormat, typer.Option("--format", "-f", help="env, json or url.")
+    ] = SettingsFormat.env,
+    show_secrets: Annotated[
+        bool, typer.Option("--show-secrets", help="Print the password in plain text.")
+    ] = False,
+):
+    environment = get_database_environment(env)
+    values = environment.dump_settings(show_secrets=show_secrets)
+    match fmt:
+        case SettingsFormat.env:
+            for key, value in values.items():
+                typer.echo(f"{key}={value}")
+        case SettingsFormat.json:
+            typer.echo(json.dumps(values, indent=2))
+        case SettingsFormat.url:
+            s = environment.settings
+            url = s.database_url
+            if not show_secrets:
+                url = url.replace(s.database_password, "********", 1)
+            typer.echo(url)

@@ -45,6 +45,7 @@ from sqlacodegen.generators import SQLModelGenerator
 from sqlalchemy import URL, MetaData, create_engine, create_mock_engine, text
 from sqlglot import exp
 from sqlmodel import Session
+from database_client import DatabaseSettings
 
 BackfillFunction = Callable[[Session], None]
 BackfillRegistry = dict[str, list[BackfillFunction]]
@@ -80,69 +81,6 @@ DatabaseEnvironment = Annotated[
     Literal["dev", "staging", "prod", "mig"], BeforeValidator(is_valid_database_env)
 ]
 
-
-class DatabaseSettings(BaseSettings):
-    """Runtime connection settings. Read from DATABASE_* environment variables."""
-
-    model_config = SettingsConfigDict(extra="ignore")
-
-    database_host: str | None = "localhost"
-    database_port: int | None = 5432
-    database_username: str | None = None
-    database_password: str | None = None
-    database_name: str | None = None
-
-    @property
-    def database_url(self) -> str:
-        return URL.create(
-            "postgresql+psycopg",
-            username=self.database_username,
-            password=self.database_password,
-            host=self.database_host,
-            port=self.database_port,
-            database=self.database_name,
-        ).render_as_string(hide_password=False)
-
-    @property
-    def engine(self):
-        return create_engine(self.database_url, connect_args={"connect_timeout": 3})
-
-    def ping(
-        self, attempts: int = 1, delay: float = 0.5, verbose: bool = False
-    ) -> None:
-        engine = self.engine
-        started = time.perf_counter()
-        last: Exception | None = None
-        try:
-            for i in range(attempts):
-                try:
-                    with engine.connect() as conn:
-                        conn.execute(text("SELECT 1"))
-                    if verbose:
-                        typer.secho(
-                            f"{self.database_name} ready in "
-                            f"{(time.perf_counter() - started) * 1000:.0f}ms",
-                            fg=typer.colors.GREEN,
-                        )
-                    return
-                except Exception as e:
-                    last = e
-                    if i + 1 >= attempts:
-                        break
-                    if verbose:
-                        typer.secho(
-                            f"Waiting for {self.database_name} ({i + 1}/{attempts})..."
-                        )
-                    time.sleep(delay)
-        finally:
-            engine.dispose()
-
-        raise RuntimeError(
-            f"Database connection to {self.database_name} failed after "
-            f"{attempts} attempt(s): {last}"
-        ) from last
-
-
 class BaseDatabaseEnvironment(ABC):
     """Deploy time lifecycle for one database environment. Used by the CLI only."""
 
@@ -150,6 +88,9 @@ class BaseDatabaseEnvironment(ABC):
     @abstractmethod
     def settings(self) -> DatabaseSettings: ...
 
+    def dump_settings(self, show_secrets: bool = False) -> dict[str, str]:
+        return self.settings.to_env(show_secrets=show_secrets)    
+        
     @abstractmethod
     def get_environment_str(self) -> str: ...
 
