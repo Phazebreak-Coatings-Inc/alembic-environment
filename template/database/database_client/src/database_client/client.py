@@ -3,7 +3,7 @@ import os
 import time
 from collections.abc import Iterator
 from functools import cache
-from typing import Annotated
+from typing import Annotated, cast
 
 from fastapi import Depends
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -11,14 +11,6 @@ from sqlalchemy import URL, Engine
 from sqlmodel import Session, create_engine, text
 
 logger = logging.getLogger(__name__)
-
-DATABASE_SECRET_KEYS = frozenset({"DATABASE_PASSWORD"})
-
-def split_secrets(values: dict[str, str]) -> tuple[dict[str, str], dict[str, str]]:
-    return (
-        {k: v for k, v in values.items() if k not in DATABASE_SECRET_KEYS},
-        {k: v for k, v in values.items() if k in DATABASE_SECRET_KEYS},
-    )
 
 class DatabaseSettings(BaseSettings):
     """Runtime connection settings. Read from DATABASE_* environment variables."""
@@ -96,11 +88,38 @@ class DatabaseSettings(BaseSettings):
             for name, value in self.model_dump().items()
         }
 
+def database_settings_lookup(env: str) -> DatabaseSettings:
+    try:
+        from database_util.utils import get_database_settings, DatabaseEnvironment
+    except ImportError as exc:
+        raise RuntimeError(
+            "DATABASE_* are not set and database_util is not installed to resolve them."
+        ) from exc
+    return get_database_settings(cast(DatabaseEnvironment, env))
+
+
+def get_database_host(env: str) -> str:
+    return database_settings_lookup(env).database_host
+
+
+def get_database_port(env: str) -> int:
+    return database_settings_lookup(env).database_port
+
+
+def get_database_name(env: str) -> str:
+    return database_settings_lookup(env).database_name
+
+
+def get_database_username(env: str) -> str:
+    return database_settings_lookup(env).database_username
+
+
+def get_database_password(env: str) -> str:
+    return database_settings_lookup(env).database_password
 
 @cache
 def get_database_client() -> DatabaseSettings:
     return DatabaseSettings()
-
 
 @cache
 def get_engine() -> Engine:
