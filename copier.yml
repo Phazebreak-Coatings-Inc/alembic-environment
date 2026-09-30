@@ -30,3 +30,4 @@ _exclude:
   - "*_override.tf.json"
 _skip_if_exists:
   - "tables.sql"
+  - "database/models/src/models/__init__.py"
