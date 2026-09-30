@@ -6,7 +6,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
-    "copier-template>=0.1.13.post1",
+    "copier-template>=0.1.14",
     "logfire>=5.1.1",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
@@ -84,7 +84,6 @@ database_client = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
 database_environments = { workspace = true }
-copier-template = { path = "../copier-template" }
 
 [dependency-groups]
 dev = [

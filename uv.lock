@@ -70,7 +70,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "copier", specifier = ">=9.15.1" },
-    { name = "copier-template", directory = "../copier-template" },
+    { name = "copier-template", specifier = ">=0.1.14" },
     { name = "logfire", specifier = ">=5.1.1" },
     { name = "tomlkit", specifier = ">=0.15.0" },
     { name = "typer", specifier = ">=0.26.6" },
@@ -384,7 +384,7 @@ wheels = [
 [[package]]
 name = "copier-template"
 version = "0.1.14"
-source = { directory = "../copier-template" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "copier" },
     { name = "inflection" },
@@ -393,19 +393,10 @@ dependencies = [
     { name = "tomlkit" },
     { name = "typer" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "copier", specifier = ">=9.18,<9.19" },
-    { name = "inflection", specifier = ">=0.5.1" },
-    { name = "pydantic-settings", specifier = ">=2.15.0" },
-    { name = "pytest", specifier = ">=9.1.1" },
-    { name = "tomlkit", specifier = ">=0.15.0" },
-    { name = "typer", specifier = ">=0.26.6" },
+sdist = { url = "https://files.pythonhosted.org/packages/93/4d/532754a10ab4dcc0752f49900ca220df7de40765afa9fa681d5939579bf4/copier_template-0.1.14.tar.gz", hash = "sha256:520f287b7fbdc494a111141aae94027a36d6ae67acafd4553077d7d767356fa5", size = 7313, upload-time = "2026-09-30T20:15:56.516Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/cf/c2bf325d5a6dd758a3bcd963f18af76fef18d5861d676a7bc3f51e4fc436/copier_template-0.1.14-py3-none-any.whl", hash = "sha256:3bd340b0f511ddff3fd36a862749db57194aca91004bc6718e5cb8c3e994a945", size = 9138, upload-time = "2026-09-30T20:15:55.661Z" },
 ]
-
-[package.metadata.requires-dev]
-dev = [{ name = "ssort", specifier = ">=0.17.0" }]
 
 [[package]]
 name = "cryptography"
@@ -524,7 +515,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
-    { name = "copier-template", directory = "../copier-template" },
+    { name = "copier-template", specifier = ">=0.1.12" },
     { name = "database-client", editable = "template/database/database_client" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "logfire", extras = ["sqlalchemy"], specifier = ">=5.1.1" },
