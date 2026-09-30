@@ -891,6 +891,20 @@ class Model:
     def name(self) -> str:
         return self.cls.name
 
+    @property
+    def table_name(self) -> str | None:
+        for s in self.cls.body:
+            if (
+                isinstance(s, ast.Assign)
+                and any(
+                    isinstance(t, ast.Name) and t.id == "__tablename__"
+                    for t in s.targets
+                )
+                and isinstance(s.value, ast.Constant)
+            ):
+                return s.value.value
+        return None
+
     def get_path(self, file: FileKind):
         return PKG_MODELS / inflection.underscore(self.name) / f"{file}.py"
 
@@ -981,6 +995,9 @@ class SQLGenerator:
 
             md = MetaData()
             md.reflect(bind=e)
+            self.tables = {
+                t.name: bool(t.primary_key.columns) for t in md.sorted_tables
+            }
             self.code = ruff_format(g(md, e, options=[]).generate())
 
     @property
@@ -998,6 +1015,15 @@ class SQLGenerator:
     @property
     def len_models(self) -> int:
         return len(self.models)
+
+    @property
+    def skipped(self) -> dict[str, str]:
+        rendered = {m.table_name for m in self.models}
+        return {
+            t: "no primary key" if not has_pk else "generated as a plain Table"
+            for t, has_pk in self.tables.items()
+            if t not in rendered
+        }
 
     @property
     def header(self) -> str:
@@ -1043,16 +1069,60 @@ def create_to_table(create: exp.Create) -> exp.Table:
     return create.this.find(exp.Table)
 
 
+def create_to_constraints(create: exp.Create) -> list[exp.Expression]:
+    return [e for e in create.this.expressions if not isinstance(e, exp.ColumnDef)]
+
+
+def constraint_parts(c: exp.Expression) -> list[exp.Expression]:
+    return list(c.expressions) if isinstance(c, exp.Constraint) else [c]
+
+
+def constraint_key(c: exp.Expression) -> str:
+    parts = constraint_parts(c)
+    if any(
+        isinstance(p, (exp.PrimaryKey, exp.PrimaryKeyColumnConstraint)) for p in parts
+    ):
+        return "PRIMARY KEY"
+    return " ".join(p.sql(dialect=DIALECT, normalize=True) for p in parts)
+
+
+def column_constraint_keys(col: exp.ColumnDef) -> set[str]:
+    keys = set()
+    for cc in col.constraints:
+        if isinstance(cc.kind, exp.PrimaryKeyColumnConstraint):
+            keys.add("PRIMARY KEY")
+        elif isinstance(cc.kind, exp.UniqueColumnConstraint):
+            unique = exp.UniqueColumnConstraint(
+                this=exp.Schema(expressions=[exp.to_identifier(col.name)])
+            )
+            keys.add(constraint_key(unique))
+        elif isinstance(cc.kind, exp.Reference):
+            fk = exp.ForeignKey(
+                expressions=[exp.to_identifier(col.name)], reference=cc.kind.copy()
+            )
+            keys.add(constraint_key(fk))
+    return keys
+
+
+def constraint_columns(c: exp.Expression) -> set[str]:
+    name = c.this if isinstance(c, exp.Constraint) else None
+    return {
+        i.name
+        for i in c.find_all(exp.Identifier)
+        if i is not name and not i.find_ancestor(exp.Reference)
+    }
+
+
 class SQLMergeError(Exception): ...
 
 
-def as_comment(col: exp.ColumnDef) -> exp.ColumnDef:
-    col._commented = True
-    return col
+def as_comment[E: exp.Expression](node: E) -> E:
+    node._commented = True
+    return node
 
 
-def is_comment(col: exp.ColumnDef) -> bool:
-    return getattr(col, "_commented", False)
+def is_comment(node: exp.Expression) -> bool:
+    return getattr(node, "_commented", False)
 
 
 def merge_columns(
@@ -1069,9 +1139,14 @@ def merge_columns(
     return merged
 
 
-def render_create(table: str, cols: list[exp.ColumnDef]) -> str:
-    real = [c for c in cols if not is_comment(c)]
-    commented = [c for c in cols if is_comment(c)]
+def render_create(
+    table: str,
+    cols: list[exp.ColumnDef],
+    constraints: list[exp.Expression] | None = None,
+) -> str:
+    items = [*cols, *(constraints or [])]
+    real = [c for c in items if not is_comment(c)]
+    commented = [c for c in items if is_comment(c)]
     body = ",\n  ".join(c.sql(dialect=DIALECT) for c in real)
     out = f"CREATE TABLE {table} (\n  {body}"
     if commented:
@@ -1110,14 +1185,25 @@ class SQLReverseGenerator:
         return {create_to_table(c).name: c for c in get_creates(TABLES_SQL.read_text())}
 
     def reverse_table(self, table: str) -> str:
-        sql_cols = create_to_columns(self.sql_creates[table])
+        sql_create = self.sql_creates[table]
+        orm_create = self.orm_creates[table]
+        sql_cols = create_to_columns(sql_create)
         sql_names = {c.name for c in sql_cols}
-        orm_only = [
-            c
-            for c in create_to_columns(self.orm_creates[table])
-            if c.name not in sql_names
+        orm_only = [c for c in create_to_columns(orm_create) if c.name not in sql_names]
+
+        sql_cons = create_to_constraints(sql_create)
+        known = {constraint_key(c) for c in sql_cons}
+        known |= {k for c in sql_cols for k in column_constraint_keys(c)}
+        orm_cons = [
+            c if constraint_columns(c) <= sql_names else as_comment(c)
+            for c in create_to_constraints(orm_create)
+            if constraint_key(c) not in known
         ]
-        return render_create(table, sql_cols + merge_columns(sql_cols, orm_only))
+        return render_create(
+            table,
+            sql_cols + merge_columns(sql_cols, orm_only),
+            sql_cons + orm_cons,
+        )
 
     def generate(self) -> dict[str, str]:
         orm = self.orm_creates

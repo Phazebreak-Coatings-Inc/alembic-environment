@@ -29,6 +29,12 @@ You'll get a message detailing how many models were generated in the command lin
 Rendered 1 model(s) from tables.sql
 ```
 
+Each table needs a primary key to become a model. Tables without one are skipped with a warning:
+
+```
+Skipped table 'users': no primary key
+```
+
 Our models were generated to ```./database/models/src/models/users```.
 
 It will also automatically write the new imports in the model's ```__init__.py``` file.
@@ -208,6 +214,8 @@ CREATE TABLE users (
 It will also run a migration automatically.
 
 As you can see, we've programmatically added a comment showing that this field came from python, without causing another run of ```uv run python -m migrations g``` to redeclare it in ```base.py```.
+
+Constraints in ```tables.sql``` are kept. Constraints that exist only on the model are added. If a constraint uses a python-only field, it is added as a comment.
 
 ### Extending the Base Model
 
