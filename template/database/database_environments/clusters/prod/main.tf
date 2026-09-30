@@ -19,7 +19,7 @@ provider "digitalocean" {
 }
 
 module "cluster" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-cluster?ref=terraform-pattern"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-cluster?ref=0.3.1"
 
   name             = var.project_name
   region           = var.cluster_region
@@ -29,7 +29,7 @@ module "cluster" {
 }
 
 module "prod_database" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-database?ref=terraform-pattern"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-database?ref=0.3.1"
 
   cluster_id = module.cluster.id
   db_name    = "prod"
@@ -37,7 +37,7 @@ module "prod_database" {
 }
 
 module "staging_database" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-database?ref=terraform-pattern"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-database?ref=0.3.1"
 
   cluster_id = module.cluster.id
   db_name    = "staging"
@@ -45,7 +45,7 @@ module "staging_database" {
 }
 
 module "logfire" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/logfire?ref=terraform-pattern"
+  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/logfire?ref=0.3.1"
 
   project_name = var.project_name
 }

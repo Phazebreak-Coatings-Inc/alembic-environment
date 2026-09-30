@@ -20,7 +20,7 @@ We can see the backfill file we generated in the ```./database/migrations/src/mi
 
 ```python
 from sqlmodel import Session
-from database_core import backfill
+from database_util import backfill
 
 
 @backfill("2a7d456bae34")
@@ -103,7 +103,7 @@ Our seed files live in the ```./database/migrations/src/migrations/seeds``` dire
 ```python
 from models import *
 from sqlmodel import Session
-from database_core import seed
+from database_util import seed
 
 @seed(['dev'])
 def my_first_seed(session: Session) -> None: 
@@ -115,7 +115,7 @@ If we want to pass in another environment, so that it seeds both, we can specify
 ```python
 from models import *
 from sqlmodel import Session
-from database_core import seed
+from database_util import seed
 
 
 @seed(["dev", "prod"])

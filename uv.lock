@@ -5,7 +5,7 @@ requires-python = ">=3.14.5"
 [manifest]
 members = [
     "alembic-environment",
-    "database-core",
+    "database-client",
     "database-environments",
     "database-util",
     "migrations",
@@ -42,7 +42,6 @@ dependencies = [
 dev = [
     { name = "alembic" },
     { name = "copier" },
-    { name = "database-core" },
     { name = "database-environments" },
     { name = "database-util" },
     { name = "debugpy" },
@@ -81,7 +80,6 @@ requires-dist = [
 dev = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "copier", specifier = ">=9.15.1" },
-    { name = "database-core", editable = "template/database/database_core" },
     { name = "database-environments", editable = "template/database/database_environments" },
     { name = "database-util", editable = "template/database/database_util" },
     { name = "debugpy", specifier = ">=1.8.21" },
@@ -451,15 +449,23 @@ wheels = [
 ]
 
 [[package]]
-name = "database-core"
+name = "database-client"
 version = "0.1.0"
-source = { editable = "template/database/database_core" }
+source = { editable = "template/database/database_client" }
 dependencies = [
-    { name = "database-util" },
+    { name = "fastapi" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic-settings" },
+    { name = "sqlmodel" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "database-util", editable = "template/database/database_util" }]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.142.0" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
+    { name = "pydantic-settings", specifier = ">=2.14.1" },
+    { name = "sqlmodel", specifier = ">=0.0.38" },
+]
 
 [[package]]
 name = "database-environments"
@@ -479,7 +485,7 @@ source = { editable = "template/database/database_util" }
 dependencies = [
     { name = "alembic" },
     { name = "copier-template" },
-    { name = "database-core" },
+    { name = "database-client" },
     { name = "inflection" },
     { name = "logfire", extra = ["sqlalchemy"] },
     { name = "psycopg", extra = ["binary"] },
@@ -497,7 +503,7 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.18.4" },
     { name = "copier-template", specifier = ">=0.1.12" },
-    { name = "database-core", editable = "template/database/database_core" },
+    { name = "database-client", editable = "template/database/database_client" },
     { name = "inflection", specifier = ">=0.5.1" },
     { name = "logfire", extras = ["sqlalchemy"], specifier = ">=5.1.1" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
@@ -569,6 +575,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/cc/28/c14e053b6762b1044f34a13aab6859bbf40456d37d23aa286ac24cfd9a5d/executing-2.2.1.tar.gz", hash = "sha256:3632cc370565f6648cc328b32435bd120a1e4ebb20c77e3fdde9a13cd1e533c4", size = 1129488, upload-time = "2025-09-01T09:48:10.866Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/ea/53f2148663b321f21b5a606bd5f191517cf40b7072c0497d3c92c4a13b1e/executing-2.2.1-py2.py3-none-any.whl", hash = "sha256:760643d3452b4d777d295bb167ccc74c64a81df23fb5e08eff250c425a4b2017", size = 28317, upload-time = "2025-09-01T09:48:08.5Z" },
+]
+
+[[package]]
+name = "fastapi"
+version = "0.142.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "annotated-doc" },
+    { name = "opentelemetry-api" },
+    { name = "pydantic" },
+    { name = "starlette" },
+    { name = "typing-extensions" },
+    { name = "typing-inspection" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/36/80/4a63481319607d5eb8cc7a3b142de7944cce6d96c19722ce68d86e08548e/fastapi-0.142.0.tar.gz", hash = "sha256:0b2d2ad7f915f29f79f190e30b40bd2b2e1bdec5617faeda10c37f7c36416305", size = 465440, upload-time = "2026-09-29T17:56:39.283Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/d6/c5bc445b65d62ee277fe1d7db068f248d4c0430791d00e095cffc7ac9245/fastapi-0.142.0-py3-none-any.whl", hash = "sha256:a42da52ec744e7b0e8a0ea6e0cbc7292c6df3cbbda8606a91aecf5c166b156da", size = 144389, upload-time = "2026-09-29T17:56:37.666Z" },
 ]
 
 [[package]]

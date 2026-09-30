@@ -2,7 +2,7 @@ _subdirectory: template
 _answers_file: .alembic-environment-answers.yml
 _exclude:
   - ".git"
-  - ".gitignore"
+  - "/.gitignore"
   - ".venv"
   - ".cache"
   - ".ruff_cache"
