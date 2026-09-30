@@ -7,9 +7,10 @@ import copier
 import tomlkit
 import typer
 import yaml
-from copier_template.util import PyProject, cli_exception_handler, sh
 from pydantic import BeforeValidator
 from typer import Typer
+
+from copier_template.util import PyProject, cli_exception_handler, sh
 
 from .config import (
     ANSWERS_FILE,
@@ -115,6 +116,13 @@ DefaultsOption = Annotated[
         help="Answer every question with its previous answer or default, without prompting.",
     ),
 ]
+OverrideOption = Annotated[
+    bool,
+    typer.Option(
+        "--override/--inline",
+        help="Override changes rather than leaving conflicts inline",
+    ),
+]
 
 app = Typer()
 
@@ -173,20 +181,31 @@ def update(
     cwd: CwdArgument = Path("."),
     local: LocalOption = False,
     defaults: DefaultsOption = False,
+    override: OverrideOption = False,
 ):
     template = local_template() if local else None
     with local_source(cwd, template) if template else nullcontext():
-        copier.run_update(
-            str(cwd),
-            answers_file=ANSWERS_FILE,
-            vcs_ref="HEAD" if template else None,
-            overwrite=True,
-            conflict="inline",
-            unsafe=True,
-            skip_tasks=True,
-            defaults=defaults,
-        )
-    repair(cwd)
+        if override:
+            copier.run_recopy(
+                str(cwd),
+                answers_file=ANSWERS_FILE,
+                vcs_ref="HEAD" if template else None,
+                overwrite=True,
+                unsafe=True,
+                skip_tasks=True,
+                defaults=defaults,
+            )
+        else:
+            copier.run_update(
+                str(cwd),
+                answers_file=ANSWERS_FILE,
+                vcs_ref="HEAD" if template else None,
+                overwrite=True,
+                conflict="inline",
+                unsafe=True,
+                skip_tasks=True,
+                defaults=defaults,
+            )
 
 
 @app.command(help="Destroy and regenerate the committed example project.", hidden=True)

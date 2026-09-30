@@ -1,5 +1,3 @@
-EXAMPLE_PRESENT = ["alembic.ini", "database/models/tables.sql"]
-
 COPIER_REPO = "gh:Phazebreak-Coatings-Inc/alembic-environment"
 """The repo that copier should target."""
 
@@ -17,13 +15,7 @@ EXAMPLE_NAME = "example"
 EXAMPLE_PROJECT_NAME = "example_project"
 """This is what the pyproject.toml.[project].name will be after running 'uv run python -m copier_template example'"""
 
-WORKSPACE = {
-    "database_client": "database/database_client",
-    "database_util": "database/database_util",
-    "models": "database/models",
-    "migrations": "database/migrations",
-    "database_environments": "database/database_environments",
-}
+WORKSPACE: dict[str, str] = {}
 """Workspace members to add to the target pyproject.
 
 Maps package name to its path.
@@ -42,30 +34,14 @@ SCRIPTS: dict[str, str] = {}
 """
 
 PACKAGES = [
-    "alembic>=1.18.4",
-    "sqlalchemy>=2.0.50",
-    "sqlmodel>=0.0.38",
-    "pytest-alembic>=0.12.1",
-    "pytest>=9.0.3",
-    "pydantic-settings>=2.14.1",
-    "psycopg[binary]>=3.3.4",
-    "ruff>=0.15.15",
-    "tomlkit>=0.15.0",
-    "sqlacodegen>=4.0.3",
-    "inflection>=0.5.1",
     "copier>=9.15.1",
+    "inflection>=0.5.1",
+    "pytest>=9.1.1",
+    "tomlkit>=0.15.0",
     "typer>=0.26.6",
-    "sqlglot>=30.12.0",
 ]
 """The dev packages that should be added to the target pyproject."""
 
 DEPENDENCIES: list[str] = []
 """The runtime packages that should be added to the target pyproject."""
 
-
-DATABASE_UTIL_SCRIPTS = {
-    "models": "database_util.clis.models.app:app",
-    "migrations": "database_util.clis.migrations.app:app",
-    "dbenv": "database_util.clis.environments.app:app",
-}
-"""Scripts declared in database_util's pyproject so they install even when the target project is not packaged."""

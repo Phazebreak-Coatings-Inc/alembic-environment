@@ -1,21 +1,26 @@
-Modules referenced by generated projects. Changes here reach projects without running `update`.
+This directory is for referencing modules that might be updated, without clients having to run ```update```.
 
-Each module follows the standard structure from the [Hashicorp documentation](https://developer.hashicorp.com/terraform/language/modules/develop/structure):
+Recommended structure for creating modules within this directory, from (Hashicorp documentation)[https://developer.hashicorp.com/terraform/language/modules/develop/structure]:
 
-```
-.
-├── README.md
-├── main.tf
-├── variables.tf
-├── outputs.tf
-```
+> A minimal recommended module following the standard structure is shown below. While the root module is the only required element, we recommend the structure below as the minimum:
+>
+>``` $ tree minimal-module/
+> .
+>├── README.md
+>├── main.tf
+>├── variables.tf
+>├── outputs.tf
+>```
 
-Reference a module from the public repository and pin `?ref=` to a tag:
+Clients in your template should reference your public repository if using terraform modules you provide in your template:
 
 ```terraform
-module "cluster" {
-  source = "git::https://github.com/Phazebreak-Coatings-Inc/alembic-environment.git//terraform/modules/postgres-cluster?ref=v0.3.1"
+module "auth0" {
+  source = "git::https://github.com/<user>/<repo>.git//terraform/modules/auth0?ref=v0.1.0"
 
-  name = var.project_name
+  project_name = var.project_name
+  api_domain   = var.api_domain
 }
 ```
+
+Always pin `?ref=` to a tag to pin a version. 

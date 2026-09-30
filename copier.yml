@@ -2,7 +2,7 @@ _subdirectory: template
 _answers_file: .alembic-environment-answers.yml
 _exclude:
   - ".git"
-  - "/.gitignore"
+  - ".gitignore"
   - ".venv"
   - ".cache"
   - ".ruff_cache"
@@ -28,5 +28,3 @@ _exclude:
   - "override.tf.json"
   - "*_override.tf"
   - "*_override.tf.json"
-  - "/database/database_environments/clusters/modules"
-  - "/database/migrations/src/migrations/versions/*"

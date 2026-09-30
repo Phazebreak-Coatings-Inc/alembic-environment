@@ -1,15 +1,13 @@
-import subprocess
-from pathlib import Path
-
 import pytest
+import subprocess
 from copier_template.util import sh
-
 from alembic_environment.config import EXAMPLE_PROJECT_NAME
+
+from pathlib import Path
 
 TEMPLATE_ROOT = Path(__file__).resolve().parents[1]
 
 import yaml
-
 
 def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=TEMPLATE_ROOT, text=True).strip()
