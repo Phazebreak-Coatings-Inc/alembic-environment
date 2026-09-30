@@ -54,6 +54,7 @@ def rg(dry_run: DryRun = False):
     )
     r = SQLReverseGenerator(SQLModel.metadata)
     if not dry_run:
+        repair()
         r.write(dry_run=dry_run)
         migrate()
         typer.secho("Wrote files successfully", fg=typer.colors.GREEN)
