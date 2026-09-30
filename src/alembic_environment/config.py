@@ -18,7 +18,7 @@ EXAMPLE_PROJECT_NAME = "example_project"
 """This is what the pyproject.toml.[project].name will be after running 'uv run python -m copier_template example'"""
 
 WORKSPACE = {
-    "database_core": "database/database_core",
+    "database_client": "database/database_client",
     "database_util": "database/database_util",
     "models": "database/models",
     "migrations": "database/migrations",
@@ -66,6 +66,6 @@ DEPENDENCIES: list[str] = []
 DATABASE_UTIL_SCRIPTS = {
     "models": "database_util.clis.models.app:app",
     "migrations": "database_util.clis.migrations.app:app",
-    "db_env": "database_util.clis.environments.app:app",
+    "dbenv": "database_util.clis.environments.app:app",
 }
 """Scripts declared in database_util's pyproject so they install even when the target project is not packaged."""

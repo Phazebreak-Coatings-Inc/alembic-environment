@@ -42,7 +42,7 @@ from pydantic import (
 )
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlacodegen.generators import SQLModelGenerator
-from sqlalchemy import URL, MetaData, create_engine, create_mock_engine, text
+from sqlalchemy import MetaData, create_mock_engine
 from sqlglot import exp
 from sqlmodel import Session
 from database_client import DatabaseSettings
@@ -830,7 +830,7 @@ def execute_seeds(
 ):
     load_seeds()
     errors: list[tuple[str, Exception]] = []
-    with Session(get_database_setting(env).engine) as s:
+    with Session(get_database_settings(env).engine) as s:
 
         def make_step(fn):
             def step():

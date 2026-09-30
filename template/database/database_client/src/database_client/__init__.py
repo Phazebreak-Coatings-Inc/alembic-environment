@@ -1,12 +1,31 @@
 from .client import (
     DatabaseSettings,
+    SessionDI,
+    database_settings_lookup,
+    ensure_database_connection,
+    ensure_database_not_dev,
+    get_database_client,
     get_database_host,
     get_database_name,
     get_database_password,
     get_database_port,
-    get_database_username
+    get_database_username,
+    get_engine,
+    get_session,
 )
 
 __all__ = [
     "DatabaseSettings",
+    "SessionDI",
+    "database_settings_lookup",
+    "ensure_database_connection",
+    "ensure_database_not_dev",
+    "get_database_client",
+    "get_database_host",
+    "get_database_name",
+    "get_database_password",
+    "get_database_port",
+    "get_database_username",
+    "get_engine",
+    "get_session",
 ]

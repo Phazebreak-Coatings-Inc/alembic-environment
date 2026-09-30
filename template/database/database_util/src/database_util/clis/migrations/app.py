@@ -192,6 +192,6 @@ def cicd(
 @e
 def cicd_apply():
     for env in ["staging", "prod"]:
-        s = get_database_setting(env)  # type: ignore
+        s = get_database_settings(env)  # type: ignore
         s.ping()
         apply(env, interactive=False)  # type: ignore

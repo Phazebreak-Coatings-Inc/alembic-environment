@@ -235,7 +235,7 @@ L.
 
 We can use the ```--startup``` flag to call startup steps on whichever environment we want.
 
-```uv run dbenv --startup```
+```uv run dbenv up prod --startup```
 
 !!! Warning
     
@@ -278,7 +278,7 @@ DATABASE_NAME=dev_db
 We can also format it using the ```-f``` flag in either ```env```, ```url```, or ```json```.
 
 
-```uv run dbenv settings dev -json```
+```uv run dbenv settings dev -f json```
 
 ```json
 {

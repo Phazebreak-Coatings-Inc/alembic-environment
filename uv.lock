@@ -454,10 +454,18 @@ version = "0.1.0"
 source = { editable = "template/database/database_client" }
 dependencies = [
     { name = "fastapi" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "pydantic-settings" },
+    { name = "sqlmodel" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "fastapi", specifier = ">=0.142.0" }]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.142.0" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.3.4" },
+    { name = "pydantic-settings", specifier = ">=2.14.1" },
+    { name = "sqlmodel", specifier = ">=0.0.38" },
+]
 
 [[package]]
 name = "database-environments"

@@ -90,7 +90,7 @@ class DatabaseSettings(BaseSettings):
 
 def database_settings_lookup(env: str) -> DatabaseSettings:
     try:
-        from database_util.utils import get_database_settings, DatabaseEnvironment
+        from database_util.utils import DatabaseEnvironment, get_database_settings
     except ImportError as exc:
         raise RuntimeError(
             "DATABASE_* are not set and database_util is not installed to resolve them."
@@ -133,7 +133,7 @@ def ensure_database_not_dev() -> None:
     client = get_database_client()
     if missing := sorted(set(type(client).model_fields) - client.model_fields_set):
         raise ValueError(
-            f"ENV={env} but {', '.join(m.upper() for m in missing)} are not set."
+            f"ENV={env} but {', '.join(m.upper() for m in missing)} are not set. "
             "Dev defaults are only used when ENV=dev."
         )
 
