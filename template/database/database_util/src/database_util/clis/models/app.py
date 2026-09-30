@@ -45,6 +45,7 @@ def g(
 @app.command(help=f"Merge ORM-only columns back into {TABLES_SQL} as comments.")
 @e
 def rg(dry_run: DryRun = False):
+    repair(dry_run=dry_run)
     import models  # noqa: F401
     from sqlmodel import SQLModel
 
@@ -54,7 +55,6 @@ def rg(dry_run: DryRun = False):
     )
     r = SQLReverseGenerator(SQLModel.metadata)
     if not dry_run:
-        repair()
         r.write(dry_run=dry_run)
         migrate()
         typer.secho("Wrote files successfully", fg=typer.colors.GREEN)
