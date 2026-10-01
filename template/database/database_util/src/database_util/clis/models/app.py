@@ -35,6 +35,8 @@ def g(
         f"\nRendered {s.len_models} model(s) from {TABLES_SQL.name}",
         fg=typer.colors.GREEN,
     )
+    for table, reason in s.skipped.items():
+        typer.secho(f"Skipped table '{table}': {reason}", fg=typer.colors.YELLOW)
     if not dry_run:
         s.write_files()
         repair()
