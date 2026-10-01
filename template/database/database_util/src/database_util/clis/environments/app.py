@@ -4,14 +4,15 @@ from typing import Annotated
 
 import typer
 from sqlmodel import Session, text
+import json
+from enum import StrEnum
 
 from ...utils import (
     DryRun,
     EnvArg,
-    ProdDatabaseSettings,
-    StagingDatabaseSettings,
+    TerraformedDatabaseEnvironment,
     e,
-    get_database_setting,
+    get_database_environment,
     setup_telemetry,
 )
 
@@ -40,17 +41,14 @@ def up(
         typer.Option(
             "-r",
             "--reapply",
-            help="If enabled, will replan and reapply if already provisioned.",
+            help="No longer needed: terraformed environments always re-apply on up.",
         ),
     ] = False,
 ):
 
-    s = get_database_setting(env)  # type: ignore
-    if reapply:
-        if env == "dev":
-            raise ValueError("Can't reapply against a non-terraformed database.")
-        s: ProdDatabaseSettings | StagingDatabaseSettings
-        s.apply()
+    s = get_database_environment(env)
+    if reapply and not isinstance(s, TerraformedDatabaseEnvironment):
+        raise ValueError("Can't reapply against a non-terraformed database.")
     s.up(startup)
 
 
@@ -59,7 +57,9 @@ def up(
 def down(
     env: EnvArg, destroy: Annotated[bool, typer.Option("--destroy", "-d")] = False
 ):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
+    if destroy and env in ['prod', 'staging']:
+        typer.confirm(f"Are you sure you want to destroy '{env}'?", abort=True)
     s.down() if not destroy else s.destroy()
 
 
@@ -68,14 +68,14 @@ def down(
 def test(
     env: EnvArg,
 ):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
     s.test()
 
 
 @app.command(help="Ping a database environment.")
 @e
 def ping(env: EnvArg):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
     s.ping(verbose=True)
 
 
@@ -91,7 +91,7 @@ def exec(
     ] = None,
     dry_run: DryRun = False,
 ):
-    s = get_database_setting(env)
+    s = get_database_environment(env)
     statement = file.read_text() if file else sql
 
     if not dry_run and env != "dev":
@@ -124,3 +124,34 @@ def exec(
             typer.secho("Dry run - rolled back.", fg=typer.colors.YELLOW)
         else:
             ses.commit()
+
+class SettingsFormat(StrEnum):
+    env = "env"
+    json = "json"
+    url = "url"
+
+@app.command(help="Print the database connection settings for an environment.")
+@e
+def settings(
+    env: EnvArg,
+    fmt: Annotated[
+        SettingsFormat, typer.Option("--format", "-f", help="env, json or url.")
+    ] = SettingsFormat.env,
+    show_secrets: Annotated[
+        bool, typer.Option("--show-secrets", help="Print the password in plain text.")
+    ] = False,
+):
+    environment = get_database_environment(env)
+    values = environment.dump_settings(show_secrets=show_secrets)
+    match fmt:
+        case SettingsFormat.env:
+            for key, value in values.items():
+                typer.echo(f"{key}={value}")
+        case SettingsFormat.json:
+            typer.echo(json.dumps(values, indent=2))
+        case SettingsFormat.url:
+            s = environment.settings
+            url = s.database_url
+            if not show_secrets:
+                url = url.replace(s.database_password, "********", 1)
+            typer.echo(url)

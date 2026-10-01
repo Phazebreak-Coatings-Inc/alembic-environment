@@ -29,6 +29,12 @@ You'll get a message detailing how many models were generated in the command lin
 Rendered 1 model(s) from tables.sql
 ```
 
+Each table needs a primary key to become a model. Tables without one are skipped with a warning:
+
+```
+Skipped table 'users': no primary key
+```
+
 Our models were generated to ```./database/models/src/models/users```.
 
 It will also automatically write the new imports in the model's ```__init__.py``` file.
@@ -178,7 +184,7 @@ class CreateMixin(ABC):
 
     @classmethod
     def create(cls, username: str = "Anonymous", **kwargs) -> Self:
-        return cls(created_by=username, **kwargs) #type: ignore
+        return cls(created_by=username, **kwargs)  # type: ignore
 
 
 class UsersMixin(CreateMixin): ...
@@ -209,6 +215,8 @@ It will also run a migration automatically.
 
 As you can see, we've programmatically added a comment showing that this field came from python, without causing another run of ```uv run python -m migrations g``` to redeclare it in ```base.py```.
 
+Constraints in ```tables.sql``` are kept. Constraints that exist only on the model are added. If a constraint uses a python-only field, it is added as a comment.
+
 ### Extending the Base Model
 
 Let's say we want to extend all of our models with ```CreateMixin```, not just one. You may have noticed the ```SQLModelBase``` class. This is a class that automatically patches in to each model you generate. That means we can add fields or methods to every model at once, easily.
@@ -228,10 +236,10 @@ class CreateMixin(ABC):
 
     @classmethod
     def create(cls, username: str = "Anonymous", **kwargs) -> Self:
-        return cls(created_by=username, **kwargs) #type: ignore
+        return cls(created_by=username, **kwargs)  # type: ignore
 
-class SQLModelBase(SQLModel, CreateMixin, ABC):
-    ...
+
+class SQLModelBase(SQLModel, CreateMixin, ABC): ...
 ```
 
 Let's run a reverse generation to see the new field:

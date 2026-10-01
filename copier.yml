@@ -28,5 +28,6 @@ _exclude:
   - "override.tf.json"
   - "*_override.tf"
   - "*_override.tf.json"
-  - "/database/database_environments/clusters/modules"
-  - "/database/migrations/src/migrations/versions/*"
+_skip_if_exists:
+  - "tables.sql"
+  - "database/models/src/models/__init__.py"

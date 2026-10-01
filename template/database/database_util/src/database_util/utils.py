@@ -1,0 +1,1396 @@
+import ast
+import contextlib
+import copy
+import importlib
+import re
+import logging
+import os
+import pkgutil
+import subprocess
+import time
+import tomllib
+from abc import ABC, abstractmethod
+from collections import defaultdict
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Annotated, Any, ClassVar, Literal, cast, get_type_hints
+
+import inflection
+import logfire
+import sqlglot
+import typer
+from alembic import op
+from alembic.config import Config
+from alembic.script import ScriptDirectory
+from alembic.util.exc import CommandError
+from copier_template.util import (
+    TerraformModule,
+    TerraformOutputError,
+    TFSecret,
+    TFSettingsMixin,
+    TFVar,
+    cli_exception_handler,
+    sh,
+)
+from logfire.propagate import attach_context, get_context
+from pydantic import (
+    AliasChoices,
+    BeforeValidator,
+    SecretStr,
+    validate_call,
+)
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlacodegen.generators import SQLModelGenerator
+from sqlalchemy import MetaData, create_mock_engine
+from sqlglot import exp
+from sqlmodel import Session
+from database_client import DatabaseSettings
+
+BackfillFunction = Callable[[Session], None]
+BackfillRegistry = dict[str, list[BackfillFunction]]
+
+BACKFILLS: BackfillRegistry = defaultdict(list)
+
+BACKFILL_TEMPLATE = """
+from sqlmodel import Session
+from database_util import backfill
+
+
+@backfill("{rev}")
+def backfill_{rev}(session: Session) -> None:
+    ...
+"""
+
+
+class BackfillException(Exception): ...
+
+
+ENVS = ["dev", "staging", "prod", "mig"]
+
+
+def is_valid_database_env(env: str) -> DatabaseEnvironment:
+    if env not in ENVS:
+        raise ValueError(
+            f"'{env}' is not a valid database environment, choose one of {ENVS}"
+        )
+    return env  # type: ignore
+
+
+DatabaseEnvironment = Annotated[
+    Literal["dev", "staging", "prod", "mig"], BeforeValidator(is_valid_database_env)
+]
+
+class BaseDatabaseEnvironment(ABC):
+    """Deploy time lifecycle for one database environment. Used by the CLI only."""
+
+    @property
+    @abstractmethod
+    def settings(self) -> DatabaseSettings: ...
+
+    def dump_settings(self, show_secrets: bool = False) -> dict[str, str]:
+        return self.settings.to_env(show_secrets=show_secrets)    
+        
+    @abstractmethod
+    def get_environment_str(self) -> str: ...
+
+    @property
+    def database_url(self) -> str:
+        return self.settings.database_url
+
+    @property
+    def engine(self):
+        return self.settings.engine
+
+    def ping(
+        self, attempts: int = 1, delay: float = 0.5, verbose: bool = False
+    ) -> None:
+        self.settings.ping(attempts=attempts, delay=delay, verbose=verbose)
+
+    def up(self, startup: bool = False) -> None:
+        try:
+            self.ping()
+            typer.secho(
+                f"Database '{self.get_environment_str()}' is already up.",
+                fg=typer.colors.GREEN,
+            )
+        except Exception:
+            self.start()
+            self.ping(attempts=60, verbose=True)
+            startup = True
+
+        if startup:
+            run_steps(fns=self.up_steps(), label="Running startup steps...")
+
+    @abstractmethod
+    def start(self) -> None: ...
+
+    def up_steps(self) -> list[Callable]:
+        return [
+            self.upgrade,
+            lambda: self.seed(interactive=False),
+        ]
+
+    @abstractmethod
+    def down(self) -> None: ...
+
+    @abstractmethod
+    def destroy(self) -> None: ...
+
+    @abstractmethod
+    def test(self) -> bool: ...
+
+    def upgrade(self):
+        from database_util.clis.migrations.app import apply
+
+        apply(self.get_environment_str(), interactive=False)  # type: ignore
+
+    def seed(self, interactive: bool = False):
+        from database_util.clis.migrations.app import seed
+
+        if (env := self.get_environment_str()) in ["dev", "prod"]:
+            return seed(env=env, i=interactive)  # type: ignore
+        if env == "staging":
+            return self.stage()
+
+    def stage(self): ...
+
+    @contextmanager
+    def temp(self):
+        try:
+            try:
+                self.ping()
+                yield None
+            except Exception:
+                self.up()
+                yield None
+        finally:
+            self.down()
+
+
+class LocalDatabaseEnvironment(BaseDatabaseEnvironment):
+    def __init__(self, settings: DatabaseSettings):
+        self._settings = settings
+
+    @property
+    def settings(self) -> DatabaseSettings:
+        return self._settings
+
+
+DIR_DATABASE = Path(__file__).parent.parent.parent.parent
+DIR_ROOT = DIR_DATABASE.parent
+ROOT_ENV = DIR_ROOT / ".env"
+
+
+class CLISettings(TFSettingsMixin, BaseSettings):
+    """Deploy time configuration read from the project .env. Never used at runtime."""
+
+    model_config = SettingsConfigDict(
+        env_file=ROOT_ENV,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    tf_cloud_organization: str | None = TFVar(
+        "TF_CLOUD_ORGANIZATION",
+        description="HCP Terraform organization that owns the workspace.",
+    )
+    tf_workspace: str | None = TFVar(
+        "TF_WORKSPACE",
+        description="HCP Terraform workspace for the database cluster.",
+    )
+    do_token: SecretStr | None = TFSecret(
+        "TF_VAR_do_token",
+        description="DigitalOcean personal access token.",
+        validation_alias=AliasChoices("DO_TOKEN", "TF_VAR_DO_TOKEN"),
+    )
+    logfire_api_key: SecretStr | None = TFSecret(
+        "LOGFIRE_API_KEY",
+        description="Logfire API key. Lets Terraform create the project and write token.",
+    )
+
+    def require(self, *names: str) -> None:
+        if missing := [n.upper() for n in names if not getattr(self, n)]:
+            raise ValueError(f"Missing {', '.join(missing)} in {ROOT_ENV}")
+
+
+ROOT_PYPROJECT = DIR_ROOT / "pyproject.toml"
+
+
+def read_project_name() -> str:
+    try:
+        name = tomllib.loads(ROOT_PYPROJECT.read_text())["project"]["name"]
+    except (OSError, KeyError, tomllib.TOMLDecodeError):
+        return "database"
+    slug = re.sub(r"[^a-z0-9]+", "-", f"{name}-database".lower()).strip("-")
+    return slug or "database"
+
+
+class TerraformedDatabaseEnvironment(BaseDatabaseEnvironment):
+    """A database provisioned by terraform. Connection settings come from its outputs."""
+
+    name_output: ClassVar[str]
+    username_output: ClassVar[str]
+    password_output: ClassVar[str]
+
+    def __init__(self, terraform_dir: Path):
+        self.terraform_dir = terraform_dir
+        self._terraform: TerraformModule | None = None
+        self._settings: DatabaseSettings | None = None
+
+    @property
+    def terraform(self) -> TerraformModule:
+        if self._terraform is None:
+            self._terraform = TerraformModule(
+                cwd=self.terraform_dir,
+                tf_vars=CLISettings().tf_env(TF_VAR_project_name=read_project_name()),
+            )
+        return self._terraform
+
+    def get_output(self, key: str) -> Any:
+        return self.terraform.get_output(key)
+
+    def connection(self, username_output: str, password_output: str) -> DatabaseSettings:
+        return DatabaseSettings(
+            database_host=self.get_output("database_host"),
+            database_port=self.get_output("database_port"),
+            database_name=self.get_output(self.name_output),
+            database_username=self.get_output(username_output),
+            database_password=self.get_output(password_output),
+        )
+
+    @property
+    def settings(self) -> DatabaseSettings:
+        if self._settings is None:
+            self._settings = self.connection(self.username_output, self.password_output)
+        return self._settings
+
+    @property
+    def admin_settings(self) -> DatabaseSettings:
+        return self.connection("admin_username", "admin_password")
+
+    def apply(self) -> None:
+        CLISettings().require("do_token", "logfire_api_key")
+        try:
+            self.terraform.apply()
+        finally:
+            self._terraform = None
+            self._settings = None
+
+    def up(self, startup: bool = False) -> None:
+        try:
+            self.ping()
+            reachable = True
+        except Exception:
+            reachable = False
+        self.apply()
+        if not reachable:
+            self.ping(attempts=60, verbose=True)
+        if startup or not reachable:
+            run_steps(fns=self.up_steps(), label="Running startup steps...")
+
+    def test(self) -> bool:
+        try:
+            self.ping()
+            return True
+        except Exception:
+            return False
+
+    def start(self) -> None:
+        self.apply()
+
+    def down(self) -> None:
+        raise Exception(
+            "Terraformed databases cannot be 'downed' like containerized databases."
+        )
+
+    def destroy(self) -> subprocess.CompletedProcess:
+        typer.confirm(
+            "Are you sure you want to destroy? This will permanently delete your database.",
+            abort=True,
+        )
+        typer.confirm(
+            "For realsies?",
+            abort=True,
+        )
+        return self.terraform.tf("destroy")
+
+    def grant(self) -> None:
+        with self.admin_settings.engine.begin() as c:
+            c.exec_driver_sql(
+                f'GRANT ALL ON SCHEMA public TO "{self.settings.database_username}"'
+            )
+        typer.secho(
+            f"Ensured grant on schema public to {self.settings.database_username}",
+            fg=typer.colors.GREEN,
+        )
+
+    def temp(self) -> None:
+        raise Exception("Can't spin up 'temp' for a terraformed database")
+
+    def up_steps(self) -> list[Callable]:
+        return [
+            self.grant,
+            self.upgrade,
+            lambda: self.seed(interactive=False),
+        ]
+
+
+IMAGE = "postgres:18-alpine"
+
+
+def image_exists() -> bool:
+    return sh(f"docker image inspect {IMAGE}", check=False, silent=True) == 0
+
+
+def pull_postgres(attempts: int = 3, backoff: float = 2.0) -> None:
+    if image_exists():
+        return
+    last = None
+    for i in range(attempts):
+        try:
+            sh(f"docker pull {IMAGE}", check=True, silent=True)
+            return
+        except Exception as e:
+            last = e
+            if image_exists():
+                return
+            if i < attempts - 1:
+                time.sleep(backoff * (2**i))
+    raise RuntimeError(f"Could not pull {IMAGE}: {last}")
+
+
+def run_steps(fns: list[Callable] | None = None, label: str | None = None):
+    fns = fns or []
+    total = len(fns)
+    for i, fn in enumerate(fns, 1):
+        typer.secho(f"{label or 'Running steps'} [{i}/{total}]", fg=typer.colors.CYAN)
+        with logfire.span("step {name}", name=fn.__name__, label=label, index=i):
+            fn()
+    typer.secho(f"Completed {total} steps successfully.", fg=typer.colors.GREEN)
+
+
+class DockerUnavailable(Exception): ...
+
+
+def require_docker() -> None:
+    r = sh("docker info", check=False, silent=True)
+    if r.returncode != 0:
+        raise DockerUnavailable(
+            "Docker isn't available - is Docker Desktop running?\n"
+            f"{(r.stderr or r.stdout or '').strip()}"
+        )
+
+
+class MigrationEnvironment(LocalDatabaseEnvironment):
+    def start(self):
+        m = self.settings
+        run_steps(
+            fns=[
+                require_docker,
+                pull_postgres,
+                lambda: sh(
+                    f"docker run -d --name {m.database_name} -e POSTGRES_USER={m.database_username} -e POSTGRES_PASSWORD={m.database_password} -e POSTGRES_DB=migrations -p {m.database_port}:5432 --rm postgres:18-alpine",
+                    check=True,
+                    silent=False,
+                ),
+                lambda: self.ping(attempts=60),
+            ],
+            label="Starting Migrations Database",
+        )
+
+    def up_steps(self) -> list[Callable]:
+        return []
+
+    def down(self):
+        m = self.settings
+        run_steps(
+            fns=[
+                lambda: sh(f"docker rm -f {m.database_name}", check=True, silent=True)
+            ],
+            label="Shutting Down Migrations Database",
+        )
+
+    def destroy(self):
+        return self.down()
+
+    def test(self):
+        return True
+
+    def get_environment_str(self) -> str:
+        return "mig"
+
+
+migration_environment = MigrationEnvironment(
+    DatabaseSettings(
+        database_host="127.0.0.1",
+        database_port=5431,
+        database_username="migrations",
+        database_password="migrations_password",
+        database_name="migrations",
+    )
+)
+WS_ENVIRONMENTS = DIR_DATABASE / "database_environments"
+PKG_CLUSTERS = WS_ENVIRONMENTS / "clusters"
+PKG_DEV = PKG_CLUSTERS / "dev"
+ENV_DEV_COMPOSE = PKG_DEV / "compose.dev.yml"
+
+
+class DevEnvironment(LocalDatabaseEnvironment):
+    def start(self):
+        run_steps(
+            fns=[
+                require_docker,
+                lambda: sh(f"docker compose -f {ENV_DEV_COMPOSE} up -d", check=True),
+            ],
+            label="Starting dev database",
+        )
+
+    def down(self):
+        sh(f"docker compose -f {ENV_DEV_COMPOSE} down")
+
+    def destroy(self):
+        sh(f"docker compose -f {ENV_DEV_COMPOSE} down -v")
+
+    def test(self):
+        with self.temp():
+            return True
+
+    def get_environment_str(self) -> str:
+        return "dev"
+
+
+dev_environment = DevEnvironment(
+    DatabaseSettings(
+        database_host="127.0.0.1",
+        database_port=5432,
+        database_name="dev_db",
+        database_username="dev_user",
+        database_password="dev_password",
+    )
+)
+
+
+class StagingEnvironment(TerraformedDatabaseEnvironment):
+    name_output = "staging_name"
+    username_output = "staging_username"
+    password_output = "staging_password"
+
+    def sanitize(self): ...
+
+    def stage(self): ...
+
+    def get_environment_str(self) -> str:
+        return "staging"
+
+
+class ProdEnvironment(TerraformedDatabaseEnvironment):
+    name_output = "prod_name"
+    username_output = "prod_username"
+    password_output = "prod_password"
+
+    def get_environment_str(self) -> str:
+        return "prod"
+
+
+@validate_call
+def get_database_environment(env: DatabaseEnvironment) -> BaseDatabaseEnvironment:
+    return {
+        "dev": dev_environment,
+        "staging": staging_environment,
+        "prod": prod_environment,
+        "mig": migration_environment,
+    }[env]
+
+
+def get_database_settings(env: DatabaseEnvironment) -> DatabaseSettings:
+    return get_database_environment(env).settings
+
+
+class AlembicSettings(BaseSettings):
+    model_config = SettingsConfigDict(env_prefix="ALEMBIC_")
+
+    env: DatabaseEnvironment = "dev"
+    auto_seed: bool = True
+
+
+alembic_settings = AlembicSettings()
+alembic_env: DatabaseEnvironment = cast(DatabaseEnvironment, alembic_settings.env)
+
+
+class RevisionError(Exception): ...
+
+
+ALEMBIC_INI = DIR_ROOT / "alembic.ini"
+
+
+def script_dir() -> ScriptDirectory:
+    if not ALEMBIC_INI.is_file():
+        raise FileNotFoundError(f"Missing {ALEMBIC_INI}")
+    return ScriptDirectory.from_config(Config(str(ALEMBIC_INI)))
+
+
+def validate_revs(revs: list[str]) -> list[str]:
+    try:
+        return [s.revision for s in script_dir().get_revisions(tuple(revs))]
+    except CommandError as e:
+        raise RevisionError(f"unknown revision(s) {revs}: {e}") from e
+
+
+def is_valid_rev(rev: str) -> str:
+    return validate_revs([rev])[0]
+
+
+Revision = Annotated[str, BeforeValidator(is_valid_rev)]
+
+
+@validate_call
+def backfill(rev: Revision):
+    def dec(fn) -> BackfillFunction:
+        if not (sesh := get_type_hints(fn).get("session", None)):
+            raise BackfillException(
+                f"session must be passed as a type hint in fn {fn.__name__}"
+            )
+        if not (isinstance(sesh, type) and issubclass(sesh, Session)):
+            raise BackfillException(
+                f"`session` of {fn.__name__} must be a sqlmodel.Session subclass"
+            )
+        BACKFILLS[rev].append(fn)
+        return fn
+
+    return dec
+
+
+def get_backfills(rev: str) -> list[BackfillFunction]:
+    name = f"migrations.backfills.{rev}"
+    try:
+        importlib.import_module(name)
+    except ModuleNotFoundError as exc:
+        if exc.name != name:
+            raise
+        return []
+    return BACKFILLS[rev]
+
+
+def run_backfill(rev: str) -> None:
+    """Called from a revision's upgrade(). No-op when the revision has no backfill."""
+    if not (fns := get_backfills(rev)):
+        return
+    with Session(bind=op.get_bind()) as session:
+        for fn in fns:
+            with logfire.span("backfill {backfill}", backfill=fn.__name__, rev=rev):
+                fn(session)
+        session.flush()
+
+
+WS_MIGRATIONS = DIR_DATABASE / "migrations"
+PKG_MIGRATIONS = WS_MIGRATIONS / "src" / "migrations"
+DIR_BACKFILLS = PKG_MIGRATIONS / "backfills"
+
+
+def write_backfill_stub(rev: str) -> Path:
+    DIR_BACKFILLS.mkdir(parents=True, exist_ok=True)
+    (DIR_BACKFILLS / "__init__.py").touch()
+    p = DIR_BACKFILLS / f"{rev}.py"
+    if not p.exists():
+        p.write_text(BACKFILL_TEMPLATE.format(rev=rev))
+        typer.secho(f"Wrote backfill stub {p}", fg=typer.colors.GREEN)
+    else:
+        typer.secho(
+            f"Backfill already exists for this revision at {p}", fg=typer.colors.YELLOW
+        )
+    return p
+
+
+migration_database = migration_environment.temp
+dev_database = dev_environment.temp
+PKG_PROD = PKG_CLUSTERS / "prod"
+staging_environment = StagingEnvironment(PKG_PROD)
+prod_environment = ProdEnvironment(PKG_PROD)
+
+
+def alembic_heads() -> list[str]:
+    return list(script_dir().get_heads())
+
+
+def latest_rev() -> str:
+    """The single head revision id."""
+    heads = alembic_heads()
+    if not heads:
+        raise RevisionError("No revisions exist yet - run 'migrations init' first.")
+    if len(heads) > 1:
+        raise RevisionError(f"History has branched across {len(heads)} heads: {heads}")
+    return heads[0]
+
+
+GIT_BOT_NAME = "github-actions[bot]"
+GIT_BOT_EMAIL = "41898282+github-actions[bot]@users.noreply.github.com"
+
+
+@contextmanager
+def git_bot(message: str, path: Path = Path(".")):
+    yield
+    sh(f'git add -- "{path}"', check=True)
+    if sh("git diff --cached --quiet", check=False).returncode == 0:
+        typer.secho("[git-bot]: nothing to commit.", fg=typer.colors.YELLOW)
+        return
+    sh(
+        f'git -c user.name="{GIT_BOT_NAME}" -c user.email="{GIT_BOT_EMAIL}" '
+        f'commit -m "{message}"',
+        check=True,
+    )
+    sh("git push", check=True)
+
+
+def ruff_format(code: str) -> str:
+    p = subprocess.run(
+        "uvx ruff format -", shell=True, input=code, capture_output=True, text=True
+    )
+    return p.stdout if p.returncode == 0 else code
+
+
+def model_exports(init: Path) -> list[str]:
+    for n in ast.parse(init.read_text()).body:
+        if isinstance(n, ast.Assign) and any(
+            isinstance(t, ast.Name) and t.id == "__all__" for t in n.targets
+        ):
+            if isinstance(n.value, ast.List):
+                return [e.value for e in n.value.elts if isinstance(e, ast.Constant)]  # type: ignore
+    return []
+
+
+def repair_model_init(dry_run: bool = False):
+    lines: list[str] = ["from .base_model import SQLModelBase"]
+    all_names: list[str] = ["SQLModelBase"]
+    for d in sorted(p for p in PKG_MODELS.iterdir() if (p / "__init__.py").exists()):
+        names = model_exports(d / "__init__.py")
+        if not names:
+            continue
+        lines.append(f"from .{d.name} import " + ", ".join(names))
+        all_names += names
+
+    body = "\n".join(lines)
+    rebuilds = [n for n in all_names if not n.endswith("Base")]
+    if rebuilds:
+        body += "\n\n" + "\n".join(f"{n}.model_rebuild()" for n in rebuilds)
+    body += "\n\n__all__ = [" + ", ".join(f'"{n}"' for n in all_names) + "]\n"
+    if not dry_run:
+        INIT_MODELS.write_text(ruff_format(body))
+    if dry_run:
+        typer.secho(f"Would have generated: \n\n {body}", fg=typer.colors.YELLOW)
+
+
+WS_MODELS = DIR_DATABASE / "models"
+TABLES_SQL = WS_MODELS / "tables.sql"
+PKG_MODELS = WS_MODELS / "src" / "models"
+TESTS_MIGRATIONS = WS_MIGRATIONS / "tests"
+PKG_ENVIRONMENTS = WS_ENVIRONMENTS / "src" / "database_environments"
+DIR_SEEDS = PKG_MIGRATIONS / "seeds"
+INIT_MODELS = PKG_MODELS / "__init__.py"
+DIR_VERSIONS = PKG_MIGRATIONS / "versions"
+ENV_PROD = PKG_PROD / ".env.prod"
+ENV_DEV = PKG_DEV / ".env.dev"
+PKG_STAGING = PKG_CLUSTERS / "staging"
+ENV_STAGING = PKG_STAGING / ".env.staging"
+
+
+SEEDABLE_ENVS = ["dev", "prod"]
+
+
+def is_valid_seedable_env(env: str) -> SeedableDatabaseEnvironment:
+    if env not in SEEDABLE_ENVS:
+        raise ValueError(
+            f"'{env}' is not a valid database environment, choose one of {SEEDABLE_ENVS}"
+        )
+    return env  # type: ignore
+
+
+SeedFunction = Callable[[Session], None]
+SeedRegistry = dict[DatabaseEnvironment, list[SeedFunction]]
+RequiresRegistry = dict[SeedFunction, list[SeedFunction]]
+SeedableDatabaseEnvironment = Annotated[
+    Literal["dev", "prod"], BeforeValidator(is_valid_seedable_env)
+]
+SeedableEnvArg = Annotated[
+    SeedableDatabaseEnvironment,
+    typer.Argument(
+        help="Choose which environment to seed for, either 'dev' or 'prod' because staging is a separate flow."
+    ),
+]
+
+
+class SeedingException(Exception): ...
+
+
+SEEDS: SeedRegistry = defaultdict(list)
+REQUIRES: RequiresRegistry = {}
+SEED_TEMPLATE = """from models import *
+from sqlmodel import Session
+from database_util import seed
+
+@seed(['{env}'])
+def {name}(session: Session) -> None:
+    ...
+"""
+
+
+@validate_call
+def generate_seed_file(
+    env: SeedableDatabaseEnvironment, name: str, dry_run: bool = False
+):
+    n = inflection.underscore(name)
+    p = DIR_SEEDS / f"{n}.py"
+    if p.exists():
+        typer.confirm(
+            f"{p.name} already exists, are you sure you want to overwrite it?",
+            abort=True,
+        )
+    else:
+        p.touch()
+
+    t = SEED_TEMPLATE.format(env=env, name=n)
+
+    if dry_run:
+        typer.secho(
+            f"Would write new seed file to {p}: \n\n{t}\n", fg=typer.colors.YELLOW
+        )
+
+    p.write_text(t)
+    typer.secho(f"Wrote new seed file to {p}: \n\n{t}\n", fg=typer.colors.GREEN)
+
+
+@validate_call
+def seed(
+    envs: list[SeedableDatabaseEnvironment], requires: list[SeedFunction] | None = None
+):
+    def dec(fn) -> SeedFunction:
+        if not (sesh := get_type_hints(fn).get("session", None)):
+            raise SeedingException(
+                f"session must be passed as a type hint in fn {fn.__name__}"
+            )
+        if not (isinstance(sesh, type) and issubclass(sesh, Session)):
+            raise SeedingException(
+                f"`session` of {fn.__name__} must be a sqlmodel.Session subclass"
+            )
+        REQUIRES[fn] = requires or []
+        for env in envs:
+            SEEDS[env].append(fn)
+        return fn
+
+    return dec
+
+
+@validate_call
+def count_seeds(env: SeedableDatabaseEnvironment) -> int:
+    return len(SEEDS[env])
+
+
+@validate_call
+def get_seeds(env: SeedableDatabaseEnvironment) -> list[SeedFunction]:
+    return SEEDS[env]
+
+
+@validate_call
+def sort_seeds(env: SeedableDatabaseEnvironment) -> list[SeedFunction]:
+    fns = get_seeds(env)
+    registered, out, done, stack = set(fns), [], set(), set()
+
+    def visit(fn):
+        if fn in done:
+            return
+        if fn in stack:
+            raise SeedingException(f"circular seed dependency at '{fn.__name__}'")
+        if fn not in registered:
+            raise SeedingException(
+                f"'{fn.__name__}' is required but not registered for environment '{env}'"
+            )
+        stack.add(fn)
+        for dep in REQUIRES.get(fn, []):
+            visit(dep)
+        stack.discard(fn)
+        done.add(fn)
+        out.append(fn)
+
+    for fn in fns:
+        visit(fn)
+
+    return out
+
+
+def load_seeds() -> None:
+    import migrations.seeds as pkg
+
+    for m in pkgutil.iter_modules(pkg.__path__):
+        importlib.import_module(f"{pkg.__name__}.{m.name}")
+
+
+@validate_call
+def execute_seeds(
+    env: SeedableDatabaseEnvironment, dry_run: bool = False, interactive: bool = True
+):
+    load_seeds()
+    errors: list[tuple[str, Exception]] = []
+    with Session(get_database_settings(env).engine) as s:
+
+        def make_step(fn):
+            def step():
+                try:
+                    with (
+                        logfire.span("seed {seed}", seed=fn.__name__, env=env),
+                        s.begin_nested(),
+                    ):
+                        fn(s)
+                except Exception as e:
+                    errors.append((fn.__name__, e))
+
+            return step
+
+        fns = [make_step(fn) for fn in sort_seeds(env)]
+
+        if len(fns) == 0:
+            typer.secho(
+                f"Found 0 seeds for environment '{env}'...", fg=typer.colors.YELLOW
+            )
+            return
+
+        if interactive and not dry_run:
+            typer.confirm(
+                f"This action will run {count_seeds(env)} functions on environment '{env},' Are you sure you want to proceed?",
+                abort=True,
+            )
+
+        run_steps(label=f"Seeding '{env}' environment", fns=fns)
+
+        if errors:
+            s.rollback()
+            details = "\n".join(f"  {name}: {e}" for name, e in errors)
+            raise SeedingException(f"{len(errors)} seed(s) failed:\n{details}")
+        if dry_run:
+            s.rollback()
+            typer.secho(
+                f"Successfully ran and rolled-back {len(fns)} seeding functions in '{env}' environment.",
+                fg=typer.colors.GREEN,
+            )
+            return
+
+        typer.secho(
+            f"Successfully ran {len(fns)} seeding functions in '{env}' environment.",
+            fg=typer.colors.GREEN,
+        )
+        s.commit()
+
+
+FileKind = Literal["base", "mixin", "model"]
+
+
+class Model:
+    def __init__(self, class_def: ast.ClassDef):
+        self.cls = class_def
+
+    @property
+    def name(self) -> str:
+        return self.cls.name
+
+    @property
+    def table_name(self) -> str | None:
+        for s in self.cls.body:
+            if (
+                isinstance(s, ast.Assign)
+                and any(
+                    isinstance(t, ast.Name) and t.id == "__tablename__"
+                    for t in s.targets
+                )
+                and isinstance(s.value, ast.Constant)
+            ):
+                return s.value.value
+        return None
+
+    def get_path(self, file: FileKind):
+        return PKG_MODELS / inflection.underscore(self.name) / f"{file}.py"
+
+    @property
+    def fields(self) -> list[ast.AnnAssign]:
+        return [
+            s
+            for s in self.cls.body
+            if isinstance(s, ast.AnnAssign) and isinstance(s.target, ast.Name)
+        ]
+
+    @staticmethod
+    def is_relationship(field: ast.AnnAssign) -> bool:
+        return (
+            isinstance(field.value, ast.Call)
+            and isinstance(field.value.func, ast.Name)
+            and field.value.func.id == "Relationship"
+        )
+
+    @property
+    def relationships(self) -> list[ast.AnnAssign]:
+        return [f for f in self.fields if self.is_relationship(f)]
+
+    def relationship_targets(self, known: set[str]) -> set[str]:
+        out: set[str] = set()
+        for f in self.relationships:
+            for n in ast.walk(f.annotation):
+                if isinstance(n, ast.Name) and n.id in known:
+                    out.add(n.id)
+                elif isinstance(n, ast.Constant) and n.value in known:
+                    out.add(n.value)
+        return out - {self.name}
+
+    def class_to_mixin(self) -> str:
+        return f"class {self.name}Mixin: ...\n"
+
+    def class_to_model(self, known: set[str]) -> str:
+        lines = [
+            "from typing import TYPE_CHECKING, List, Optional",
+            "from sqlmodel import Relationship",
+            "from ..base_model import SQLModelBase",
+            f"from .base import {self.name}Base",
+            f"from .mixin import {self.name}Mixin",
+        ]
+        if targets := sorted(self.relationship_targets(known)):
+            lines += ["", "if TYPE_CHECKING:"] + [
+                f"    from ..{inflection.underscore(t)}.model import {t}"
+                for t in targets
+            ]
+        lines += [
+            "",
+            "",
+            f"class {self.name}({self.name}Mixin, SQLModelBase, {self.name}Base, table=True):",
+        ]
+        lines += [f"    {ast.unparse(r)}" for r in self.relationships] or ["    pass"]
+        return "\n".join(lines) + "\n"
+
+    def class_to_base(self) -> str:
+        """SQLModel base: the same class without table=True or relationships."""
+        node = copy.deepcopy(self.cls)
+        node.name = f"{self.name}Base"
+        node.keywords = [k for k in node.keywords if k.arg != "table"]
+        node.decorator_list = []
+        node.body = [
+            s
+            for s in node.body
+            if not (isinstance(s, ast.AnnAssign) and self.is_relationship(s))
+        ] or [ast.Pass()]
+        return "from sqlmodel import SQLModel, Field\n\n\n" + ast.unparse(node)
+
+    def class_to_init(self) -> str:
+        names = [
+            f"{self.name}Base",
+            self.name,
+        ]
+        imports = f"from .base import {names[0]}\nfrom .model import {names[1]}\n"
+        exports = "__all__ = [" + ", ".join(f'"{n}"' for n in names) + "]\n"
+        return imports + "\n" + exports
+
+
+class SQLGenerator:
+    def __init__(self, dry_run: bool = False):
+        g = SQLModelGenerator
+        e = migration_environment.engine
+        with migration_database():
+            with e.begin() as c:
+                c.exec_driver_sql(self.tables_file.read_text())
+
+            md = MetaData()
+            md.reflect(bind=e)
+            self.tables = {
+                t.name: bool(t.primary_key.columns) for t in md.sorted_tables
+            }
+            self.code = ruff_format(g(md, e, options=[]).generate())
+
+    @property
+    def tables_file(self) -> Path:
+        return TABLES_SQL
+
+    @property
+    def tree(self) -> ast.Module:
+        return ast.parse(self.code)
+
+    @property
+    def models(self):
+        return [Model(n) for n in self.tree.body if isinstance(n, ast.ClassDef)]
+
+    @property
+    def len_models(self) -> int:
+        return len(self.models)
+
+    @property
+    def skipped(self) -> dict[str, str]:
+        rendered = {m.table_name for m in self.models}
+        return {
+            t: "no primary key" if not has_pk else "generated as a plain Table"
+            for t, has_pk in self.tables.items()
+            if t not in rendered
+        }
+
+    @property
+    def header(self) -> str:
+        return "\n".join(
+            ast.get_source_segment(self.code, n) or ""
+            for n in self.tree.body
+            if isinstance(n, (ast.Import, ast.ImportFrom))
+        )
+
+    def write_files(self):
+        known = {m.name for m in self.models}
+        for model in self.models:
+            directory = model.get_path("model").parent
+            directory.mkdir(parents=True, exist_ok=True)
+
+            model.get_path("base").write_text(
+                ruff_format(f"{self.header}\n\n\n{model.class_to_base()}")
+            )
+            model.get_path("model").write_text(ruff_format(model.class_to_model(known)))
+
+            mixin_path = model.get_path("mixin")
+            if not mixin_path.exists():
+                mixin_path.write_text(ruff_format(model.class_to_mixin()))
+
+            (directory / "__init__.py").write_text(ruff_format(model.class_to_init()))
+
+
+DIALECT = "postgres"
+
+
+class SQLParseError(Exception): ...
+
+
+def get_creates(sql: str) -> list[exp.Create]:
+    return [s for s in sqlglot.parse(sql) if isinstance(s, exp.Create)]
+
+
+def create_to_columns(create: exp.Create) -> list[exp.ColumnDef]:
+    return list(create.find_all(exp.ColumnDef))
+
+
+def create_to_table(create: exp.Create) -> exp.Table:
+    return create.this.find(exp.Table)
+
+
+def create_to_constraints(create: exp.Create) -> list[exp.Expression]:
+    return [e for e in create.this.expressions if not isinstance(e, exp.ColumnDef)]
+
+
+def constraint_parts(c: exp.Expression) -> list[exp.Expression]:
+    return list(c.expressions) if isinstance(c, exp.Constraint) else [c]
+
+
+def constraint_key(c: exp.Expression) -> str:
+    parts = constraint_parts(c)
+    if any(
+        isinstance(p, (exp.PrimaryKey, exp.PrimaryKeyColumnConstraint)) for p in parts
+    ):
+        return "PRIMARY KEY"
+    return " ".join(p.sql(dialect=DIALECT, normalize=True) for p in parts)
+
+
+def column_constraint_keys(col: exp.ColumnDef) -> set[str]:
+    keys = set()
+    for cc in col.constraints:
+        if isinstance(cc.kind, exp.PrimaryKeyColumnConstraint):
+            keys.add("PRIMARY KEY")
+        elif isinstance(cc.kind, exp.UniqueColumnConstraint):
+            unique = exp.UniqueColumnConstraint(
+                this=exp.Schema(expressions=[exp.to_identifier(col.name)])
+            )
+            keys.add(constraint_key(unique))
+        elif isinstance(cc.kind, exp.Reference):
+            fk = exp.ForeignKey(
+                expressions=[exp.to_identifier(col.name)], reference=cc.kind.copy()
+            )
+            keys.add(constraint_key(fk))
+    return keys
+
+
+def constraint_columns(c: exp.Expression) -> set[str]:
+    name = c.this if isinstance(c, exp.Constraint) else None
+    return {
+        i.name
+        for i in c.find_all(exp.Identifier)
+        if i is not name and not i.find_ancestor(exp.Reference)
+    }
+
+
+class SQLMergeError(Exception): ...
+
+
+def as_comment[E: exp.Expression](node: E) -> E:
+    node._commented = True
+    return node
+
+
+def is_comment(node: exp.Expression) -> bool:
+    return getattr(node, "_commented", False)
+
+
+def merge_columns(
+    c1: list[exp.ColumnDef],
+    c2: list[exp.ColumnDef],
+    comment: bool = True,
+):
+    names = {c.name for c in c1}
+    merged = []
+    for col in c2:
+        if col.name in names:
+            raise SQLMergeError(f"Column '{col.name}' is already defined")
+        merged.append(as_comment(col) if comment else col)
+    return merged
+
+
+def render_create(
+    table: str,
+    cols: list[exp.ColumnDef],
+    constraints: list[exp.Expression] | None = None,
+) -> str:
+    items = [*cols, *(constraints or [])]
+    real = [c for c in items if not is_comment(c)]
+    commented = [c for c in items if is_comment(c)]
+    body = ",\n  ".join(c.sql(dialect=DIALECT) for c in real)
+    out = f"CREATE TABLE {table} (\n  {body}"
+    if commented:
+        out += "\n  " + "\n  ".join("-- " + c.sql(dialect=DIALECT) for c in commented)
+    return out + "\n)"
+
+
+def get_sql_from_orm(metadata: MetaData):
+    ddl = []
+    engine = create_mock_engine(
+        "postgresql://",
+        lambda sql, *a, **k: ddl.append(str(sql.compile(dialect=engine.dialect))),
+    )
+    metadata.create_all(engine, checkfirst=False)
+    return ddl
+
+
+def comment_out(sql: str) -> str:
+    return "\n".join(f"-- {line}" for line in sql.splitlines())
+
+
+class SQLReverseGenerator:
+    def __init__(self, metadata: MetaData):
+        self.metadata = metadata
+
+    @property
+    def orm_creates(self) -> dict[str, exp.Create]:
+        creates = {}
+        for ddl in get_sql_from_orm(self.metadata):
+            for c in get_creates(ddl):
+                creates[create_to_table(c).name] = c
+        return creates
+
+    @property
+    def sql_creates(self) -> dict[str, exp.Create]:
+        return {create_to_table(c).name: c for c in get_creates(TABLES_SQL.read_text())}
+
+    def reverse_table(self, table: str) -> str:
+        sql_create = self.sql_creates[table]
+        orm_create = self.orm_creates[table]
+        sql_cols = create_to_columns(sql_create)
+        sql_names = {c.name for c in sql_cols}
+        orm_only = [c for c in create_to_columns(orm_create) if c.name not in sql_names]
+
+        sql_cons = create_to_constraints(sql_create)
+        known = {constraint_key(c) for c in sql_cons}
+        known |= {k for c in sql_cols for k in column_constraint_keys(c)}
+        orm_cons = [
+            c if constraint_columns(c) <= sql_names else as_comment(c)
+            for c in create_to_constraints(orm_create)
+            if constraint_key(c) not in known
+        ]
+        return render_create(
+            table,
+            sql_cols + merge_columns(sql_cols, orm_only),
+            sql_cons + orm_cons,
+        )
+
+    def generate(self) -> dict[str, str]:
+        orm = self.orm_creates
+        out = {t: self.reverse_table(t) for t in self.sql_creates if t in orm}
+        for t, create in orm.items():
+            if t not in self.sql_creates:
+                out[t] = comment_out(create.sql(dialect=DIALECT, pretty=True))
+        return out
+
+    def write(self, path: Path = TABLES_SQL, dry_run: bool = False) -> str:
+        extra = [
+            s
+            for s in sqlglot.parse(path.read_text())
+            if s is not None and not isinstance(s, exp.Create)
+        ]
+        if extra:
+            raise SQLParseError(
+                f"{path.name} contains {len(extra)} non-CREATE statement(s) that would be "
+                f"lost: {[s.sql(dialect=DIALECT)[:40] for s in extra]}"
+            )
+
+        if not self.sql_creates:
+            raise SQLParseError(f"No CREATE TABLE statements found in {path}")
+
+        reversed = self.generate()
+        ordered = list(self.sql_creates) + [
+            t for t in reversed if t not in self.sql_creates
+        ]
+
+        parts = []
+        for t in ordered:
+            sql = reversed.get(t) or self.sql_creates[t].sql(
+                dialect=DIALECT, pretty=True
+            )
+            parts.append(sql if sql.lstrip().startswith("--") else sql + ";")
+        body = "\n\n".join(parts) + "\n"
+
+        if not dry_run:
+            path.write_text(body)
+
+        return body
+
+
+TRACE_ENV_VARS = ("TRACEPARENT", "TRACESTATE")
+DEPLOYED_ENVS = ("staging", "prod")
+
+logger = logging.getLogger("alembic-environment")
+
+_TELEMETRY_CONFIGURED = False
+
+
+class TelemetrySettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="ignore")
+
+    alembic_env: DatabaseEnvironment = alembic_env
+    logfire_token: str = ""
+    otel_exporter_otlp_endpoint: str = ""
+    otel_exporter_otlp_headers: str = ""
+
+    @property
+    def telemetry_enabled(self) -> bool:
+        return bool(self.logfire_token or self.otel_exporter_otlp_endpoint)
+
+    def resolve_token(self) -> None:
+        if self.logfire_token or self.alembic_env not in DEPLOYED_ENVS:
+            return
+        with contextlib.suppress(TerraformOutputError, FileNotFoundError):
+            self.logfire_token = str(prod_environment.get_output("logfire_token"))
+
+    def setup_telemetry(self, service_name: str | None = None) -> bool:
+        global _TELEMETRY_CONFIGURED
+        if _TELEMETRY_CONFIGURED:
+            return self.telemetry_enabled
+        self.resolve_token()
+        if self.otel_exporter_otlp_endpoint:
+            os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = self.otel_exporter_otlp_endpoint
+        if self.otel_exporter_otlp_headers:
+            os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = self.otel_exporter_otlp_headers
+        logfire.configure(
+            service_name=service_name or read_project_name(),
+            environment=self.alembic_env,
+            token=self.logfire_token or None,
+            send_to_logfire="if-token-present" if self.telemetry_enabled else False,
+            console=False,
+        )
+        logfire.instrument_sqlalchemy()
+        logging.getLogger().addHandler(logfire.LogfireLoggingHandler())
+        _TELEMETRY_CONFIGURED = True
+        self.check_telemetry()
+        return self.telemetry_enabled
+
+    def check_telemetry(self) -> None:
+        if self.telemetry_enabled or self.alembic_env not in DEPLOYED_ENVS:
+            return
+        msg = (
+            f"env={self.alembic_env} but telemetry is unconfigured. "
+            "Set LOGFIRE_TOKEN or OTEL_EXPORTER_OTLP_ENDPOINT"
+        )
+        logger.warning(msg)
+        typer.secho(msg, fg=typer.colors.YELLOW, err=True)
+
+
+def setup_telemetry() -> bool:
+    return TelemetrySettings().setup_telemetry()
+
+
+@contextmanager
+def step(message: str, name: str, **attrs) -> Iterator[None]:
+    typer.secho(message, fg=typer.colors.YELLOW)
+    with logfire.span(name, **attrs):
+        yield
+
+
+def trace_env() -> dict[str, str]:
+    """The current trace context as environment variables for a subprocess."""
+    return {k.upper(): v for k, v in get_context().items()}
+
+
+@contextmanager
+def inherited_trace() -> Iterator[None]:
+    """Continue a trace started by a parent process."""
+    carrier = {k.lower(): os.environ[k] for k in TRACE_ENV_VARS if k in os.environ}
+    with attach_context(carrier):
+        yield
+
+
+RevisionOption = Annotated[
+    Revision, typer.Option("-r", "--revision", help="Which alembic revision to target.")
+]
+VerboseOption = Annotated[
+    bool, typer.Option("-v", "--verbose", help="Run in verbose mode.")
+]
+EnvArg = Annotated[
+    DatabaseEnvironment,
+    typer.Argument(help="Which database environment to target."),
+]
+DryRun = Annotated[
+    bool, typer.Option("-d", "--dry-run", help="Run without irreversible changes.")
+]
+Interactive = Annotated[
+    bool,
+    typer.Option("-i", "--interactive", help="Whether to confirm application."),
+]
+
+
+@validate_call
+def alembic(cmd: str, env: DatabaseEnvironment = alembic_env):
+    sh(
+        f"alembic {cmd}",
+        check=True,
+        cwd=DIR_ROOT,
+        env={"ALEMBIC_ENV": env, **trace_env()},
+    )
+
+
+e = cli_exception_handler
+
+TEST_TYPES = ["all", "migrations", "seeds"]
+
+
+def validate_test_type(t: str) -> TestType:
+    if t not in TEST_TYPES:
+        raise ValueError()
+    return t
+
+
+TestType = Annotated[str, BeforeValidator(validate_test_type)]
+
+TEST_DIR = Path(__file__).parent.parent.parent.parent / "tests"
+
+
+@validate_call
+def alembic_test(typ: TestType = "all", throw: bool = False):
+    target = TESTS_MIGRATIONS if typ == "all" else f"{TESTS_MIGRATIONS}/test_{typ}.py"
+    sh(f"pytest {target}", check=throw)
+
+
+def alembic_check():
+    alembic("upgrade head", "mig")
+    try:
+        alembic("check", "mig")
+    except subprocess.CalledProcessError as e:
+        raise typer.Exit(e.returncode) from None
+
+
+def alembic_migrate(message: str = ""):
+    if len(alembic_heads()) > 1:
+        alembic('merge -m "merge heads" heads', "mig")
+    alembic("upgrade head", "mig")
+    alembic(f'revision --autogenerate -m "{message or "auto"}"', "mig")

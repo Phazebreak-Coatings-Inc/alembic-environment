@@ -22,7 +22,7 @@ from ...utils import (
     e,
     execute_seeds,
     generate_seed_file,
-    get_database_setting,
+    get_database_settings,
     git_bot,
     latest_rev,
     setup_telemetry,
@@ -30,7 +30,7 @@ from ...utils import (
     write_backfill_stub,
 )
 from ...utils import migration_database as mdb
-from ...utils import migration_settings as ms
+from ...utils import migration_environment as ms
 
 app = typer.Typer()
 
@@ -192,6 +192,6 @@ def cicd(
 @e
 def cicd_apply():
     for env in ["staging", "prod"]:
-        s = get_database_setting(env)  # type: ignore
+        s = get_database_settings(env)  # type: ignore
         s.ping()
         apply(env, interactive=False)  # type: ignore

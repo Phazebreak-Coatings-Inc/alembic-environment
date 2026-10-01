@@ -7,9 +7,8 @@ import yaml
 
 from alembic_environment.config import (
     EXAMPLE_NAME,
-    EXAMPLE_PRESENT,
     EXAMPLE_PROJECT_NAME,
-    DATABASE_UTIL_SCRIPTS,
+    SCRIPTS,
     WORKSPACE,
 )
 
@@ -56,17 +55,9 @@ def test_member_landed_and_pinned(doc, name, path):
     assert doc["tool"]["uv"]["sources"][key]["workspace"] is True
 
 
-@pytest.mark.parametrize("name,target", DATABASE_UTIL_SCRIPTS.items())
-def test_script_registered(name, target):
-    util = tomlkit.parse(
-        (EXAMPLE / WORKSPACE["database_util"] / "pyproject.toml").read_text()
-    )
-    assert util["project"]["scripts"][name] == target
-
-
-@pytest.mark.parametrize("path", EXAMPLE_PRESENT)
-def test_present(path):
-    assert (EXAMPLE / path).exists()
+@pytest.mark.parametrize("name,target", SCRIPTS.items())
+def test_script_registered(doc, name, target):
+    assert doc["project"]["scripts"][name] == target
 
 
 @pytest.mark.parametrize("path", _root_exclusions())
@@ -75,7 +66,7 @@ def test_excluded_path_absent(path):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("name", DATABASE_UTIL_SCRIPTS)
+@pytest.mark.parametrize("name", SCRIPTS)
 def test_script_runs(name):
     subprocess.run(["uv", "sync"], cwd=EXAMPLE, check=True)
     r = subprocess.run(

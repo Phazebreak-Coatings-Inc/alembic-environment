@@ -35,6 +35,8 @@ def g(
         f"\nRendered {s.len_models} model(s) from {TABLES_SQL.name}",
         fg=typer.colors.GREEN,
     )
+    for table, reason in s.skipped.items():
+        typer.secho(f"Skipped table '{table}': {reason}", fg=typer.colors.YELLOW)
     if not dry_run:
         s.write_files()
         repair()
@@ -45,6 +47,7 @@ def g(
 @app.command(help=f"Merge ORM-only columns back into {TABLES_SQL} as comments.")
 @e
 def rg(dry_run: DryRun = False):
+    repair(dry_run=dry_run)
     import models  # noqa: F401
     from sqlmodel import SQLModel
 

@@ -1,12 +1,12 @@
 [project]
 name = "alembic-environment"
-version = "0.3.0"
+version = "0.3.1"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "copier>=9.15.1",
-    "copier-template>=0.1.10",
+    "copier-template>=0.1.14",
     "logfire>=5.1.1",
     "tomlkit>=0.15.0",
     "typer>=0.26.6",
@@ -25,6 +25,17 @@ alembic_environment = "alembic_environment.__main__:main"
 requires = ["uv_build>=0.11.18,<0.12"]
 build-backend = "uv_build"
 
+[[tool.pydantic_settings_export.generators.dotenv]]
+paths = [".env.example"]
+settings = ["database_util.util:CLISettings"]
+
+[[tool.pydantic_settings_export.generators.dotenv]]
+paths = [".env.app.example"]
+settings = ["database_util.util:AppSettings"]
+
+[[tool.pydantic_settings_export.generators.markdown]]
+paths = ["./docs/configuration.md"]
+file_prefix = "# Configuration"
 
 [tool.pytest.ini_options]
 markers = ["slow: builds the example project", "docker: needs a running docker daemon"]
@@ -63,14 +74,13 @@ members = [
     "template/database/migrations",
     "template/database/database_environments",
     "template/database/database_util",
-    "template/database/database_core",
+    "template/database/database_client",
 ]
 exclude = ["example"]
 
 [tool.uv.sources]
-copier-template = { git = "https://github.com/Phazebreak-Coatings-Inc/copier-template", branch = "019" }
 database_util = { workspace = true }
-database_core = { workspace = true }
+database_client = { workspace = true }
 models = { workspace = true }
 migrations = { workspace = true }
 database_environments = { workspace = true }
@@ -86,7 +96,6 @@ dev = [
     "migrations",
     "database_environments",
     "database_util",
-    "database_core",
     "pytest-alembic>=0.12.1",
     "pytest>=9.1.1",
     "pydantic-settings>=2.14.1",
@@ -99,6 +108,7 @@ dev = [
     "copier>=9.15.1",
     "typer>=0.26.6",
     "sqlglot>=30.12.0",
+    "pydantic-settings-export>=1.1.3",
 ]
 
 docs = [

@@ -6,12 +6,12 @@ Traces are stored in Logfire. Nothing is written to your databases.
 
 ## Project
 
-`environments up prod` creates one Logfire project and a write token with Terraform. The project is named `<root project>_database`. Staging and prod share it. They are split by the `deployment.environment` attribute.
+`database_environments up prod` creates one Logfire project and a write token with Terraform. The project is named `<root project>_database`. Staging and prod share it. They are split by the `deployment.environment` attribute.
 
-Terraform needs a Logfire API key with project and token management scopes:
+Terraform needs a Logfire API key with project and token management scopes. Add it to `.env` at your project root:
 
-```sh
-export LOGFIRE_API_KEY=your-api-key
+```
+LOGFIRE_API_KEY=your-api-key
 ```
 
 ## Token
@@ -59,6 +59,7 @@ with step("Loading users...", "load users", count=10):
 
 ```python
 import logfire
+
 
 @seed(["dev"])
 def users(session: Session) -> None:

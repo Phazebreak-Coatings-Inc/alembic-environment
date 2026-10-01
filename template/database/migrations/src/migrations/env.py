@@ -4,9 +4,8 @@ from logging.config import fileConfig
 import logfire
 from alembic import context
 from database_util.utils import (
-    get_database_setting,
+    get_database_settings,
     inherited_trace,
-    migration_settings,
     setup_telemetry,
 )
 from sqlalchemy import engine_from_config, pool
@@ -32,8 +31,8 @@ target_metadata = APP_METADATA
 
 def _resolve_url() -> str:
     if env := os.environ.get("ALEMBIC_ENV"):
-        return get_database_setting(env).database_url  # type: ignore
-    return migration_settings.database_url
+        return get_database_settings(env).database_url  # type: ignore
+    return get_database_settings("mig").database_url
 
 
 def process_revision_directives(context, revision, directives):

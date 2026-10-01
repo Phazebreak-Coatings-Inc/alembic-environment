@@ -8,11 +8,9 @@ To setup your ```dev``` environment. We don't need to pass any kind of environme
 
 Run the following command to bring up your database:
 
-```uv run python -m database_environments up dev```
+```uv run dbenv up dev```
 
 ```
-PS C:\Users\miles\PycharmProjects\alembic-environment> uv run python 
--m database_environments up dev
 [+] up 2/2
  ✔ Network dev_default              Created                      0.0s
  ✔ Container postgres_dev_container Created                      0.1s
@@ -60,27 +58,34 @@ Token for app.terraform.io:
 
 Enter the token you just created.
 
-After, refer to the ```./.env.api``` for entering the following environment variables:
+After, add the following to ```./.env``` at your project root:
 
 ```
 TF_CLOUD_ORGANIZATION="Your Hashicorp organization here"
 TF_WORKSPACE="Your project name here"
 ```
 
+The CLI runs Terraform on your machine and passes it values from ```.env```. Set the workspace's execution mode to **Local** in HCP Terraform. In Remote mode the plan runs on HCP's servers and never sees your ```.env```.
+
 ### Setting Up ```prod``` and ```staging```
 
 First, we'll want to create a Personal Access Token for Digital Ocean. Please visit the following documentation for steps to retrieve it [here](https://docs.digitalocean.com/reference/api/create-personal-access-token/).
 
-Once you have your token, create and open your env file at ```./.env```:
+Then create a Logfire API key with project and token management scopes. See [logfire.md](logfire.md).
+
+Add both to ```./.env```:
 
 ```
-TF_VAR_do_token="{{Your digital ocean token here}}"
+DO_TOKEN="{{Your digital ocean token here}}"
+LOGFIRE_API_KEY="{{Your Logfire API key here}}"
 ```
 
-Once you have listed your token under ```TF_VAR_do_token```, go ahead and terraform your database environments using the following command:
+```TF_VAR_do_token``` is still accepted in place of ```DO_TOKEN```.
+
+The CLI reads ```.env``` itself and stops before Terraform runs if either value is missing. Terraform your database environments with:
 
 ```
-uv run --env-file .env python -m database_environments up prod
+uv run python -m database_environments up prod
 ```
 
 It will alert us that we're successfully connected to the cloud:
@@ -185,7 +190,26 @@ Changes to Outputs:
 
 The database cluster can up to 10 minutes to provision. Don't cancel the current command.
 
-If you want to destroy your infrastructure, run ```uv run --env-file .env python -m database_environments down prod --destroy```.
+If you want to destroy your infrastructure, run ```uv run dbenv down prod --destroy```.
+
+### Cluster size
+
+The cluster defaults to 2 nodes of ```db-s-2vcpu-4gb``` in ```nyc1``` running Postgres 18. To change any of these, create ```database/database_environments/clusters/prod/prod.auto.tfvars```:
+
+```
+cluster_size       = "db-s-1vcpu-2gb"
+cluster_node_count = 1
+cluster_region     = "sfo3"
+postgres_version   = "18"
+```
+
+Terraform loads ```*.auto.tfvars``` automatically. Template updates never touch this file, so commit it with your project.
+
+Run ```up prod``` again to apply the change. It applies without asking for confirmation.
+
+!!! Warning
+
+    Changing ```cluster_region``` replaces the cluster and deletes its data. Size and node count change in place. Check a Postgres major version change against DigitalOcean's upgrade rules first.
 
 ## Applying Migrations
 
@@ -195,7 +219,7 @@ If you want to apply a migration to prod or staging there are two methods:
 
 We'll use ```migrations``` to apply a migration to a specific environment.
 
-```uv run --env-file .env python -m migrations apply prod```
+```uv run python -m migrations apply prod```
 
 The following output:
 
@@ -211,7 +235,7 @@ L.
 
 We can use the ```--startup``` flag to call startup steps on whichever environment we want.
 
-```uv run --env-file .env python -m database_environments up --startup```
+```uv run dbenv up prod --startup```
 
 !!! Warning
     
@@ -231,40 +255,122 @@ Found 0 seeds for environment 'prod'...
 Completed 3 steps successfully.
 ```
 
-
 ## Accessing The Databases
 
-### Accessing via Python
+The ```DatabaseSettings``` in the ```database_client``` package ingests the following environment variables: ```DATABASE_HOST```, ```DATABASE_PORT```, ```DATABASE_NAME```, ```DATABASE_USERNAME``` and ```DATABASE_PASSWORD```. When none are set, it attempts to connect to the dev database.
 
-If you'd like to access your infrastructure in python, do the following:
+### Setting Up Your Client
 
-```python
-from database_core import get_database_setting
+#### With ```.env``` 
 
-engine = get_database_setting("prod").engine
+We first have to access the variables through the ```settings``` CLI.
+
+Let's run the following command ```uv run dbenv settings dev```:
+
+```
+DATABASE_HOST=127.0.0.1
+DATABASE_PORT=5432
+DATABASE_USERNAME=dev_user
+DATABASE_PASSWORD=********
+DATABASE_NAME=dev_db
 ```
 
-```engine``` provides ```SQLAlchemy```'s ```Engine``` object.
+We can also format it using the ```-f``` flag in either ```env```, ```url```, or ```json```.
 
-If you'd like to access a different engine, replace ```"prod"``` with either ```"dev"``` or ```"staging"```.
 
-You can even set which environment is running with environment variables:
+```uv run dbenv settings dev -f json```
 
-```python
-import os
-from database_core import get_database_setting
-
-env = os.environ.get("ENVIRONMENT")
-engine = get_database_setting(env).engine
+```json
+{
+  "DATABASE_HOST": "127.0.0.1",
+  "DATABASE_PORT": "5432",
+  "DATABASE_USERNAME": "dev_user",
+  "DATABASE_PASSWORD": "********",
+  "DATABASE_NAME": "dev_db"
+}
 ```
 
-```get_database_setting()``` automatically validates with ```pydantic```, so if you put an invalid value, there's nothing to worry about.
+While I'm displaying ```dev``` here, you will use either ```prod``` or ```staging``` with deployed environments.
+
+We can show the password by using the ```--show-secrets``` argument.
+
+```uv run dbenv settings dev -f json --show-secrets```:
+
+```json
+{
+  "DATABASE_HOST": "127.0.0.1",
+  "DATABASE_PORT": "5432",
+  "DATABASE_USERNAME": "dev_user",
+  "DATABASE_PASSWORD": "dev_password",
+  "DATABASE_NAME": "dev_db"
+}
+```
+
+#### Without ```.env```
+
+Let's say we want to dynamically get the environment variables for an automated process, without using ```.env``` file:
+
+```python
+from database_client import get_database_host, get_database_password
+
+host = get_database_host("prod")
+password = get_database_password("prod")
+```
+
+The following command will automatically read terraform's outputs for our Digital Ocean ```staging``` and ```prod``` databases we deployed.
+
+### Python
+
+If you'd like to access your infrastructure in python, we can use ```get_engine``` from the ```database_client``` package:
+
+```python
+from database_client import get_engine
+
+engine = get_engine()
+```
+
+```get_engine()``` provides one cached SQLAlchemy ```Engine``` object. It uses ```DATABASE_*``` environment variables, or the dev database when they are not set.
+
+### FastAPI
+
+```database_client``` also provides Dependency Injection for ```sqlmodel``` ```Session``` objects:
+
+```python
+from typing import Annotated
+
+from fastapi import Depends
+from sqlmodel import Session, select
+
+from database_client import SessionDI
+from models import User
+
+@app.get("/users")
+def list_users(session: SessionDI) -> list[User]:
+    return session.exec(select(User)).all()
+```
+
+The package also provides useful diagnostic commands for your FastAPI lifespan:
+
+```python
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+
+from database_client import ensure_database_connection, ensure_database_not_dev
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ensure_database_not_dev()
+    ensure_database_connection()
+    yield
+```
 
 ### Querying via CLI
 
 If you want to query a database environment directly, use the following:
 
-```uv run --env-file .env python -m database_environments exec```
+```uv run python -m database_environments exec```
 
 We can either feed the command SQL or the name of a ```.sql``` file.
 
@@ -275,7 +381,7 @@ SELECT 1
 ```
 
 ```
-uv run --env-file .env python -m database_environments exec dev --sql "SELECT 1"
+uv run python -m database_environments exec dev --sql "SELECT 1"
 ```
 
 The output:
@@ -288,7 +394,7 @@ The output:
 We can do the same thing by making a ```.sql``` file called ```select.sql``` and putting ```SELECT 1``` there.
 
 ```
-uv run --env-file .env python -m database_environments exec dev --file "./select.sql"
+uv run python -m database_environments exec dev --file "./select.sql"
 ```
 
 The output, again:
@@ -301,7 +407,7 @@ The output, again:
 You can also run this on the ```staging``` and ```prod``` environments, but they will ask you to confirm your execution:
 
 ```
-uv run --env-file .env python -m database_environments exec prod --file "./select.sql"
+uv run python -m database_environments exec prod --file "./select.sql"
 ```
 
 ```

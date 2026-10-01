@@ -3,10 +3,7 @@ __pycache__/
 *.py[codz]
 *$py.class
 
-#nx
-.nx/
-
-#example
+# example
 example/
 
 # C extensions
@@ -224,6 +221,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
 
 #Terraform
 .terraform/
