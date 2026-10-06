@@ -1113,6 +1113,42 @@ def constraint_columns(c: exp.Expression) -> set[str]:
     }
 
 
+def check_constraints(
+    create: exp.Create,
+) -> list[tuple[str | None, exp.CheckColumnConstraint]]:
+    out = []
+    for e in create.this.expressions:
+        if isinstance(e, exp.ColumnDef):
+            out += [
+                (cc.this.name if cc.this else None, cc.kind)
+                for cc in e.constraints
+                if isinstance(cc.kind, exp.CheckColumnConstraint)
+            ]
+        elif isinstance(e, exp.Constraint):
+            out += [
+                (e.name, p)
+                for p in e.expressions
+                if isinstance(p, exp.CheckColumnConstraint)
+            ]
+        elif isinstance(e, exp.CheckColumnConstraint):
+            out.append((None, e))
+    return out
+
+
+def constraint_names(table: str, create: exp.Create) -> set[str]:
+    names = {e.name for e in create.this.expressions if isinstance(e, exp.Constraint)}
+    for name, check in check_constraints(create):
+        if name is None:
+            cols = {c.name for c in check.find_all(exp.Column)}
+            base = f"{table}_{cols.pop()}_check" if len(cols) == 1 else f"{table}_check"
+            name, n = base, 0
+            while name in names:
+                n += 1
+                name = f"{base}{n}"
+        names.add(name)
+    return names
+
+
 class SQLMergeError(Exception): ...
 
 
@@ -1194,10 +1230,12 @@ class SQLReverseGenerator:
         sql_cons = create_to_constraints(sql_create)
         known = {constraint_key(c) for c in sql_cons}
         known |= {k for c in sql_cols for k in column_constraint_keys(c)}
+        known_names = constraint_names(table, sql_create)
         orm_cons = [
             c if constraint_columns(c) <= sql_names else as_comment(c)
             for c in create_to_constraints(orm_create)
             if constraint_key(c) not in known
+            and not (isinstance(c, exp.Constraint) and c.name in known_names)
         ]
         return render_create(
             table,

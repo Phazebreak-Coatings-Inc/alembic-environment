@@ -217,6 +217,8 @@ As you can see, we've programmatically added a comment showing that this field c
 
 Constraints in ```tables.sql``` are kept. Constraints that exist only on the model are added. If a constraint uses a python-only field, it is added as a comment.
 
+A constraint counts as already in ```tables.sql``` if its definition or its name matches. Unnamed checks get the name Postgres gives them, such as ```users_email_check```.
+
 ### Extending the Base Model
 
 Let's say we want to extend all of our models with ```CreateMixin```, not just one. You may have noticed the ```SQLModelBase``` class. This is a class that automatically patches in to each model you generate. That means we can add fields or methods to every model at once, easily.
